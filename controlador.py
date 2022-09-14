@@ -65,7 +65,7 @@ def invertir_cadena(cadena):
 
 root=Tk()
 
-root.title('Algoritmo Knn - System');
+root.title('Algoritmo kNN - Kunaschik, Saucedo, Zitelli');
 root.resizable(0,0)
 root.geometry('750x450')
 
