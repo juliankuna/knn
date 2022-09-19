@@ -10,5 +10,11 @@ class Dato:
 class Punto: 
     x: float
     y: float
+
+
+@dataclass
+class DatoConDistancia: 
+    x: float
+    y: float
     clase: int
     distancia:float
