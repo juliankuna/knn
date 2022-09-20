@@ -38,9 +38,16 @@ def BuscarMaximoEnElDataset()-> Punto:
     yArrayPoints = [f.y for f in dataSet]
     return Punto(max(xArrayPoints), max(yArrayPoints))
 
+def GetClasesEnDataSet(todasLasClases)->List[int]:
+    listaClases:List[int] = []
+    for clase in todasLasClases:
+        if clase not in listaClases:
+            listaClases.append(clase)
+    return listaClases
+
 def IniciarAlgoritmo ():
     try:
-        dataSet.clear()
+        dataSet.clear()        
         datosString=CargarArchivo();       
 
         #Creamos matriz de valores 0 ceros 
@@ -55,7 +62,33 @@ def IniciarAlgoritmo ():
             #cargamos una grilla con cada uno de los puntos (x,y,clase,distancia)
             dataSet.append(Dato(float(fila[0]), float(fila[1]),int(fila[2])))        
             n=n+1   
+        #contar la cantidad de clases
+        clasesEnElDataset = GetClasesEnDataSet([f.clase for f in dataSet])
 
+        #Separando todos los puntos del dataset y agrupandolos por su clase
+        clasesConSusPuntos= []
+        for clase in clasesEnElDataset:
+            listaPuntos: list[Punto] = [Punto(f.x,f.y) for f in dataSet if f.clase == clase]
+            clasesConSusPuntos.append(ClaseConPuntos(clase,listaPuntos))
+
+        #Cargando el dataSet de entrenamiento y el de prueba
+        dataSetEntrenamiento.clear()
+        dataSetPrueba:List[Dato] = [] #linea necesaria o sinó el dataSetPrueba.clear() tiraba error
+        dataSetPrueba.clear()
+        for clase in clasesConSusPuntos:
+            cantidadPuntos=len(clase.puntos)
+            porcentajeEntrenamiento=0.8
+            criterioParada= round(porcentajeEntrenamiento * cantidadPuntos)
+            cont=0
+            for punto in clase.puntos:
+                if cont < criterioParada: 
+                    dataSetEntrenamiento.append(Dato(punto.x,punto.y,clase))
+                    cont+=1
+                else:
+                    dataSetPrueba.append(Dato(punto.x,punto.y,clase))
+            
+        
+        
         #GENERAR GRILLA
         GenerarGrilla()   
     except Exception as e:
@@ -72,12 +105,12 @@ def IniciarAlgoritmo ():
         elif line[2]==2:
             color_filt.append(color[2])
 
-    # plt.close()
-    # plt.scatter(matriz[:,0],matriz[:,1],color=color_filt)
-    # plt.xlabel('Eje x')
-    # plt.ylabel('Eje y')
-    # plt.title('Gráfico de puntos con k='+str(valorK.get()))
-    # plt.show()
+    plt.close()
+    plt.scatter(matriz[:,0],matriz[:,1],color=color_filt)
+    plt.xlabel('Eje x')
+    plt.ylabel('Eje y')
+    plt.title('Gráfico de puntos con k='+str(valorK.get()))
+    plt.show()
 
 def setPathFile():
     nombreConRuta = filedialog.askopenfilename(title="Elegir un DataSet",filetypes = (("excel files",".csv"),("all files",".*")));
@@ -163,11 +196,11 @@ def GenerarGrilla():
         yMin= PuntoMinimo.y - 1
         yMax= PuntoMaximo.y + 1
         #Determinando rangos para los vectores de coordenadas x e y.
-        grid_x_range = np.arange(xMin, xMax, 0.5)
-        grid_y_range = np.arange(yMin, yMax, 0.5)
+        vectorX = np.arange(xMin, xMax, 0.5)
+        vectorY = np.arange(yMin, yMax, 0.5)
 
         #Devolvemos una matriz de coordenadas a partir de los vectores de coordenadas
-        grid_x, grid_y = np.meshgrid(grid_x_range, grid_y_range)
+        grid_x, grid_y = np.meshgrid(vectorX, vectorY)
 
         ListaClasesVecinos : List[Dato] = []
         for n in range( len( grid_x.flatten() ) ):
@@ -175,20 +208,21 @@ def GenerarGrilla():
             ListaClasesVecinos.append(DefinirClase(punto))
 
         fig = plt.figure()
-        fig.suptitle(f"KNN con K={valorK.get()}")
-        GridAndData = fig.add_subplot(121)
-        Grid = fig.add_subplot(122)
+        fig.suptitle(f"kNN con K={valorK.get()}")
+        
+        GrillaConDataset = fig.add_subplot(122)
+        Grilla = fig.add_subplot(121)
 
-        #plot grid
-        GridAndData.scatter(grid_x,grid_y,
+        #Gráfico de la grilla
+        GrillaConDataset.scatter(grid_x,grid_y,
                     c = ListaClasesVecinos,
                     alpha = 0.4,
                     cmap= "tab10",
                     marker="s",
                     label="Grilla")
 
-        #plot dataset
-        GridAndData.scatter([d.x for d in dataSet],
+        #Gráfico del dataset
+        GrillaConDataset.scatter([d.x for d in dataSet],
                     [d.y for d in dataSet],
                     c = [d.clase for d in dataSet],
                     alpha = 0.9,
@@ -198,21 +232,21 @@ def GenerarGrilla():
                     linewidths=5,
                     linewidth=3)
 
-        Grid.pcolormesh(grid_x,grid_y,
+        Grilla.pcolormesh(grid_x,grid_y,
                     np.asarray(ListaClasesVecinos).reshape(grid_x.shape),
                     shading="auto",
                     alpha = 1,
                     cmap= "tab10")
 
-        plt.title(f"kNN con K={valorK.get()}")
+        plt.title(f"Resultado kNN con K={valorK.get()}")
 
-        GridAndData.set_title('Grilla con DataSet')
+        GrillaConDataset.set_title('Grilla con DataSet')
 
-        Grid.set_title('Grilla')
-        Grid.set_xlabel('Eje x')
-        Grid.set_ylabel('Eje y')
+        Grilla.set_title('Grilla')
+        Grilla.set_xlabel('Eje x')
+        Grilla.set_ylabel('Eje y')
         fig.canvas.manager.set_window_title('IA II - Gráfico kNN')
-        GridAndData.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=True, shadow=True, ncol=5)                   
+        GrillaConDataset.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=True, shadow=True, ncol=5)                   
         plt.show()
 #/////////////////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -222,6 +256,10 @@ root.resizable(0,0)
 root.geometry('750x450')
 
 dataSet: List[Dato] = []
+dataSetPrueba:List[Dato] = []
+dataSetEntrenamiento: List[Dato] = []
+
+clasesConSusPuntos:List[ClaseConPuntos] = []
 
 nombreArchivo=StringVar()
 nombreArchivo.set('')
