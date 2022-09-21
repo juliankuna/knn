@@ -21,3 +21,10 @@ class DatoConDistancia:
     y: float
     clase: int
     distancia:float
+
+@dataclass
+class DatoConClasesVecinos: 
+    x: float
+    y: float
+    clase: int
+    clasesVecinos:List[int]

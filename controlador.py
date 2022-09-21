@@ -75,17 +75,17 @@ def IniciarAlgoritmo ():
         dataSetEntrenamiento.clear()
         dataSetPrueba:List[Dato] = [] #linea necesaria o sinó el dataSetPrueba.clear() tiraba error
         dataSetPrueba.clear()
-        for clase in clasesConSusPuntos:
-            cantidadPuntos=len(clase.puntos)
+        for claseConPuntos in clasesConSusPuntos:
+            cantidadPuntos=len(claseConPuntos.puntos)
             porcentajeEntrenamiento=0.8
             criterioParada= round(porcentajeEntrenamiento * cantidadPuntos)
             cont=0
-            for punto in clase.puntos:
+            for punto in claseConPuntos.puntos:
                 if cont < criterioParada: 
-                    dataSetEntrenamiento.append(Dato(punto.x,punto.y,clase))
+                    dataSetEntrenamiento.append(Dato(float(punto.x),float(punto.y), int(claseConPuntos.clase)))
                     cont+=1
                 else:
-                    dataSetPrueba.append(Dato(punto.x,punto.y,clase))
+                    dataSetPrueba.append(Dato(float(punto.x),float(punto.y), int(claseConPuntos.clase)))
             
         
         
@@ -152,13 +152,13 @@ def GraficarVistaInicial ():
 
 #/////////////////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////////////////
-def BuscarVecinos(GridPoint) -> List[dict[int, int, int, list[float]]]:
+def BuscarVecinos(punto:Punto) -> List[dict[int, int, int, list[float]]]:
         #Obtenemos todas las distancias a los puntos
-        listaDistancias : List[float] = [CalcularDistanciaEuclidea(float(GridPoint[0]),float(GridPoint[1]), d.x, d.y) for d in dataSet]
-        puntosConDistancia:List[DatoConDistancia] = []
+        listaDistancias : List[float] = [CalcularDistanciaEuclidea(float(punto[0]),float(punto[1]), d.x, d.y) for d in dataSetEntrenamiento]
+        puntoConDistancias:List[DatoConDistancia] = []
         i=0
-        for d in dataSet:
-            puntosConDistancia.append( 
+        for d in dataSetEntrenamiento:
+            puntoConDistancias.append( 
                                 {
                                     "x":d.x,
                                     "y":d.y,
@@ -167,10 +167,13 @@ def BuscarVecinos(GridPoint) -> List[dict[int, int, int, list[float]]]:
                                 })
             i=i+1
         
-        #sort by most nearby eucDist
-        puntosConDistancia = sorted(puntosConDistancia, key=lambda d : d["distancia"])
-        #get only the k number of Neighbors of that min euclidians
-        return puntosConDistancia[:valorK.get()]
+        #ordenamos por proximidad calculada usando la distancia euclidea
+        puntoConDistancias = sorted(puntoConDistancias, key=lambda d : d["distancia"])
+        
+        puntoConDistancias.pop(0) #eliminamos el primero al ser distancia contra el mismo punto
+        
+        #Retornamos los k vecinos mas próximos según la distancia euclidea
+        return puntoConDistancias[:valorK.get()]
 
 def ClaseMasFrecuente(List) -> int:
     masFrecuente = 0
@@ -184,8 +187,9 @@ def ClaseMasFrecuente(List) -> int:
 
 def DefinirClase(punto) -> int:
         listaVecinos:List[Any] = BuscarVecinos(punto)
-        ClasesExistentes:List[int] = [n["clase"] for n in listaVecinos]
-        return ClaseMasFrecuente(ClasesExistentes)
+        #listamos las clases de todos los k vecinos
+        ClasesVecinos:List[int] = [n["clase"] for n in listaVecinos] 
+        return ClaseMasFrecuente(ClasesVecinos)
 
 def GenerarGrilla():
         #Definiendo maximos y minimos para la grilla
@@ -195,6 +199,7 @@ def GenerarGrilla():
         xMax= PuntoMaximo.x + 1
         yMin= PuntoMinimo.y - 1
         yMax= PuntoMaximo.y + 1
+        
         #Determinando rangos para los vectores de coordenadas x e y.
         vectorX = np.arange(xMin, xMax, 0.5)
         vectorY = np.arange(yMin, yMax, 0.5)
@@ -222,9 +227,9 @@ def GenerarGrilla():
                     label="Grilla")
 
         #Gráfico del dataset
-        GrillaConDataset.scatter([d.x for d in dataSet],
-                    [d.y for d in dataSet],
-                    c = [d.clase for d in dataSet],
+        GrillaConDataset.scatter([d.x for d in dataSetEntrenamiento],
+                    [d.y for d in dataSetEntrenamiento],
+                    c = [d.clase for d in dataSetEntrenamiento],
                     alpha = 0.9,
                     cmap= "tab10",
                     marker="X",
@@ -266,7 +271,7 @@ nombreArchivo.set('')
 ubicacionArchivo=StringVar()
 ubicacionArchivo.set('')
 valorK = IntVar()
-
+valorKOptimo = IntVar()
 GraficarVistaInicial()
 
 
