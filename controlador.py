@@ -17,7 +17,10 @@ import matplotlib.patches as mpatches
 
 #(x1,y1) punto de origen, (x2,y2) punto destino
 def CalcularDistanciaEuclidea(x1:float, y1:float, x2:float, y2:float) -> float:
-    return round(math.sqrt(( (x2-x1)**2 ) + ( (y2-y1)**2 )),2)
+    a=np.array((x1,y1))
+    b=np.array((x2,y2))
+    distancia = np.sqrt(np.sum(np.square(a-b)))
+    return distancia
 
 def CargarArchivo ():
     #Abrimos el archivo en modo de solo lectura... leemos las lineas y cerramos el archivo
@@ -134,15 +137,54 @@ def CargarMatrizPuntos(datosString):
         n=n+1
     return matriz   
 
+def CargarMatrizKFold(dataSet:List[Dato]):
+
+    # La mas sencilla e intuitiva
+    # matriz = []
+    # for i in range(numero_filas):
+    #     matriz.append([])
+    #     for j in range(numero_columnas):
+    #         matriz[i].append(None)
+
+    matrizDistancias= np.zeros((len(dataSet),len(dataSet)))
+    # for i in range (0, len(dataSet)): #numero de filas
+    #     matrizPuntos.append([])
+    #     for j in range (0,len(dataSet)):
+    #         matrizPuntos[i].append([])
+    dtype = [('clase', int), ('distancia', float)]
+    matrizPuntos=np.empty(((len(dataSet)), (len(dataSet))),dtype=dtype)
+    for i in range (0, (len(dataSet))): #numero de filas
+        dato=dataSet[i]
+        for j in range (0,(len(dataSet))): #numero de columnas
+            distancia=0
+            if (j!=i):
+                vecino=dataSet[j]                    
+                if(matrizDistancias[i][j]==0 and matrizDistancias[j][i]==0 ):
+                    distancia=CalcularDistanciaEuclidea(dato.x,dato.y,vecino.x,vecino.y)
+                    matrizDistancias[i][j]=distancia
+                    matrizDistancias[j][i]=distancia
+                else:
+                    distancia=matrizDistancias[j][i]                
+                matrizPuntos[i][j]=(vecino.clase,distancia)
+            else:
+                matrizPuntos[i][j]=(dato.clase,distancia)
+    return matrizPuntos
+
+def _getDistancia(datoPrueba):
+    return datoPrueba.distancia
+
 def IniciarAlgoritmo ():
     try:
         dataSet: List[Dato] = []
         datosString= CargarArchivo();
         dataSet= CargarDataSet(datosString)
         matriz=CargarMatrizPuntos(datosString)
-            
+
+        matrizKFold = CargarMatrizKFold(dataSet)
+        
+    
         #Obtener k optimo.
-        valorKOptimo.set(ObtenerKOptimo(dataSet))
+        valorKOptimo.set(ObtenerKOptimo(dataSet, matrizKFold))
         
         #GENERAR GRILLA
         #GenerarGrilla()   
@@ -182,72 +224,105 @@ def IniciarAlgoritmo ():
     #plt.legend(loc='best')
     plt.show()
 
-def ObtenerKOptimo(dataSet:List[Dato]) -> int:
+
+def ObtenerKOptimo(dataSet,matrizKFold) -> int:
     KFoldResults = []
-    PuntosConDist = []
-    #cargamos la tabla en horizontal de cada punto con sus 9 vecinos
-    dataSetPruebaCalculado = []
-    for d in dataSet:
-        #este es el que va a sobreescribir los valores de la clase de cada punto y 
-        # de ahi vamos a comparar contra el dataSetPrueba que tiene los valores reales        
-        dataSetPruebaCalculado.append(d) 
-        PuntosConDist.append(BuscarVecinos(len(dataSet)-1,Punto(d.x,d.y),dataSet)) 
-    #PuntosConDistancias tiene la distancia los k puntos vecinos en el dataset
+    KPonderadoResults = []
 
-    #contador de aciertos para los k-vecinos
-    contadorAciertos = 0
+    dType = [('clase', int), ('distancia', float)]
+    longitud=len(dataSet)
+    matrizColumnasOrdenadas=np.empty((0,longitud),dtype=dType)
+    for j in range(0, longitud):
+        columna=np.empty(longitud,dtype=dType)
+        for i in range(0, longitud):
+            columna[i]=(matrizKFold[i][j])
+        #columna=np.sort(columna,order='distancia')
+        
+        columna=np.sort(columna, order='distancia')
+
+        # print(columna)
+        # columna= np.delete(columna,[0]) #quitamos el primer item al ser distancia = 0 por ser distancia a si mismo
+        # print('post eliminación')
+        # print(columna)
+        matrizColumnasOrdenadas=np.append(matrizColumnasOrdenadas,columna)
+        
+    
     #Desde k=1 hasta 15
-    for k in range(1,15):
-        #recorremos una columna y guardamos primero el punto cabecera,
-        #y luego una lista de solo las etiquetas de sus vecinos
-        PuntosConDistancias=PuntosConDist
-        i=0
-        for puntoConTodosLosVecinos in PuntosConDistancias:
-            puntoskVecinos=puntoConTodosLosVecinos[:k]
-            ClasesDeVecinos:List[int] = []
-            dato = dataSetPruebaCalculado[i]
-
-            # for puntoVecino in puntoskVecinos:
-            #     ClasesDeVecinos.append(puntoVecino['clase'])
-            ClasesDeVecinos = [p['clase'] for p in puntoskVecinos]
-            ClaseMasRepetida = 0
-            #determinamos cada clase y su cantidad de ocurrencias en los k vecinos
-            cantidadClases = Counter(ClasesDeVecinos)
-            #determinamos el valor de la clase para el punto analizado en base a sus vecinos
-            ClaseMasRepetida = max(cantidadClases,key=cantidadClases.get)
-            
-            isPonderado=False
-            if(isPonderado):
-                clasesyPesos:List[ClaseYDistancia] = []
-                for clase in ClasesDeVecinos:
-                    acu=0
-                    for p in puntoskVecinos:
-                        if(p['clase'] == clase):
-                            distanciaEuclidea=(CalcularDistanciaEuclidea(p['x'],p['y'],dato.x,dato.y))
-                            if(distanciaEuclidea > 0 ):
-                                acu=acu+1*(1/(distanciaEuclidea**2))
-                                clasesyPesos.append({
-                                                "clase": clase,
-                                                "peso":acu
-                                            })
-                
-                clasesyPeso = sorted(clasesyPesos, key=lambda d : d["peso"])
-                ClaseMasRepetida = clasesyPesos[0]['clase']             
-            else:
-                print('Camino del kNN tradicional')    
-                            
-            ocurrenciasDeMaxValRep = 0
-            CantidadDeVecesDeLaClaseMasRepetida = cantidadClases[ClaseMasRepetida]
-            for clase in cantidadClases:
-                if cantidadClases[clase] == CantidadDeVecesDeLaClaseMasRepetida:
-                    ocurrenciasDeMaxValRep=ocurrenciasDeMaxValRep+1
-            if ocurrenciasDeMaxValRep == 1:
-                if ClaseMasRepetida == dato.clase:
-                    contadorAciertos = contadorAciertos+1
-            ocurrenciasDeMaxValRep = 0
-        KFoldResults.append({"k":k, "Presición":contadorAciertos})
+    z=1
+    for k in range(1,(len(dataSet))-1):
+        #contador de aciertos para los k-vecinos       
+        
         contadorAciertos = 0
-        i+=1
+        contadorAciertosPonderado = 0
+        matrizColumnasOrdenadasAux = np.copy(matrizColumnasOrdenadas)  #creamos una copia de matrizColumnasOrdenadas
+        #recorremos una columna y guardamos primero el punto cabecera,
+        for i in range(0,(len(dataSet))-1):
+            claseDato=columna[0]['clase']
+            columna=matrizColumnasOrdenadasAux[:(len(dataSet))]
+            matrizColumnasOrdenadasAux=np.delete(matrizColumnasOrdenadasAux,np.s_[0:(len(dataSet))])
+            print(f'vuelta: {z}')
+            z+=1            
+            columna= np.delete(columna,[0]) #quitamos el primer item al ser distancia = 0 por ser distancia a si mismo
+            
+            puntoskVecinos = np.array(columna[:k])   #puntosKVecios= list(clase,distancia)         
+                        
+            ClasesDeVecinos = np.array(puntoskVecinos['clase'])
+            #determinamos cada clase y su cantidad de ocurrencias en los k vecinos
+            counterClases = Counter(ClasesDeVecinos)
+            #determinamos el valor de la clase para el punto analizado en base a sus vecinos
+            
+            clasesDistintasVecinos=np.unique(ClasesDeVecinos) #array de 1 de cada clase distinta
+
+            if(z == 600):
+                print('hola')
+
+            #kNN Tradicional
+            banderaEmpate= False
+            if(len(clasesDistintasVecinos) > 1): #significa que hay al menos 2 clases distintas en los vecinos
+                dosClasesMasRepetidas = counterClases.most_common(2)    
+                if(dosClasesMasRepetidas[0][1]==dosClasesMasRepetidas[1][1]): #si las dos clases mas repetidas de los k vecinos se repiten la misma cantidad de veces => hay empate y el algoritmo no puede definir la clase
+                    banderaEmpate = True
+
+            ClaseMasRepetida = 0
+            if(banderaEmpate == False):
+                ClaseMasRepetida = max(counterClases,key=counterClases.get)
+                if ClaseMasRepetida == claseDato:
+                    contadorAciertos = contadorAciertos+1
+            
+            #kNN Ponderado
+            clasePonderadaAux = 0 # clase que se va a comparar a la del dato analizado            
+            acuMaxPonderado=0
+            banderaEmpatePonderado = False
+            
+
+            if(len(clasesDistintasVecinos) > 1):
+                for clase in clasesDistintasVecinos:
+                    acu = 0
+                    #kVecinosMismaClase=np.where(puntoskVecinos[0]==clase)
+                    kVecinosMismaClase=[p for p in puntoskVecinos if p["clase"]==clase]
+                    for aux in kVecinosMismaClase:
+                        acu= acu + 1/(aux['distancia']**2)
+                    
+                    if(acuMaxPonderado < acu):
+                        acuMaxPonderado= acu
+                        clasePonderadaAux = clase
+                        banderaEmpatePonderado = False
+                    if(acuMaxPonderado == acu):
+                        banderaEmpatePonderado = True
+
+                if(banderaEmpatePonderado == False):
+                    if(clasePonderadaAux == claseDato):
+                        contadorAciertosPonderado = contadorAciertosPonderado + 1  
+            else: #k=1 entonces solo se compara la clase del vecino con la del dato
+                ClaseMasRepetida = max(counterClases,key=counterClases.get)
+                if(ClaseMasRepetida == claseDato):
+                    contadorAciertosPonderado = contadorAciertosPonderado + 1
+
+        KFoldResults.append({"k": k, "Presición": contadorAciertos})            
+        KPonderadoResults.append({"k":k,"Presición":contadorAciertosPonderado})
+       
+
+            
     
     #PLOT AND GUI TABLE FUNCTIONS
     xList:List[int] = [x["k"] for x in KFoldResults]
@@ -257,8 +332,10 @@ def ObtenerKOptimo(dataSet:List[Dato]) -> int:
     #     yList.append(KFold["accuracy"])
     
     KFoldResults = sorted(KFoldResults, reverse=True, key=lambda d : d["Presición"])
+    KPonderadoResults = sorted(KPonderadoResults, reverse=True, key=lambda d : d["Presición"])
     kOptimo = KFoldResults[0]
-
+    kOptimoPonderado = KPonderadoResults [0]
+    
     plt.plot(xList,yList,'r--')
     plt.title(f"Comparación de valores k (Óptimo: k={kOptimo['k']}, Cantidad de aciertos = {kOptimo['Presición']})")
     plt.xlabel('Valor de k')
@@ -284,7 +361,7 @@ def ObtenerKOptimo(dataSet:List[Dato]) -> int:
 
     plt.ion()
     plt.show()
-    plt.pause(3)
+    plt.pause(10)
     return kOptimo
 
 
