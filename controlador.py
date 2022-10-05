@@ -138,27 +138,16 @@ def CargarMatrizPuntos(datosString):
     return matriz   
 
 def CargarMatrizKFold(dataSet:List[Dato]):
-
-    # La mas sencilla e intuitiva
-    # matriz = []
-    # for i in range(numero_filas):
-    #     matriz.append([])
-    #     for j in range(numero_columnas):
-    #         matriz[i].append(None)
-
-    matrizDistancias= np.zeros((len(dataSet),len(dataSet)))
-    # for i in range (0, len(dataSet)): #numero de filas
-    #     matrizPuntos.append([])
-    #     for j in range (0,len(dataSet)):
-    #         matrizPuntos[i].append([])
-    dtype = [('clase', int), ('distancia', float)]
-    matrizPuntos=np.empty(((len(dataSet)), (len(dataSet))),dtype=dtype)
-    for i in range (0, (len(dataSet))): #numero de filas
+    longitud=(len(dataSet))
+    matrizDistancias= np.zeros((longitud,longitud), float)
+    dType = [('clase', int), ('distancia', float)]
+    matrizPuntos=np.empty((longitud, longitud),dtype=dType)
+    for i in range (0, longitud): #numero de filas
         dato=dataSet[i]
-        for j in range (0,(len(dataSet))): #numero de columnas
+        for j in range (0,longitud): #numero de columnas
             distancia=0
             if (j!=i):
-                vecino=dataSet[j]                    
+                vecino=dataSet[j]
                 if(matrizDistancias[i][j]==0 and matrizDistancias[j][i]==0 ):
                     distancia=CalcularDistanciaEuclidea(dato.x,dato.y,vecino.x,vecino.y)
                     matrizDistancias[i][j]=distancia
@@ -168,6 +157,9 @@ def CargarMatrizKFold(dataSet:List[Dato]):
                 matrizPuntos[i][j]=(vecino.clase,distancia)
             else:
                 matrizPuntos[i][j]=(dato.clase,distancia)
+    
+
+
     return matrizPuntos
 
 def _getDistancia(datoPrueba):
@@ -181,8 +173,13 @@ def IniciarAlgoritmo ():
         matriz=CargarMatrizPuntos(datosString)
 
         matrizKFold = CargarMatrizKFold(dataSet)
+        # clases = [f['clase'] for f in matrizKFold]
+        # clasesArray= np.array(clases[0])
+        # counterClases= Counter(clasesArray)
+        # clasesDistintasVecinos=np.unique(clasesArray) #array de 1 de cada clase distinta
+        # print(counterClases)
+        # print(clasesDistintasVecinos)
         
-    
         #Obtener k optimo.
         valorKOptimo.set(ObtenerKOptimo(dataSet, matrizKFold))
         
@@ -230,36 +227,29 @@ def ObtenerKOptimo(dataSet,matrizKFold) -> int:
     KPonderadoResults = []
 
     dType = [('clase', int), ('distancia', float)]
-    longitud=len(dataSet)
-    matrizColumnasOrdenadas=np.empty((0,longitud),dtype=dType)
-    for j in range(0, longitud):
-        columna=np.empty(longitud,dtype=dType)
-        for i in range(0, longitud):
-            columna[i]=(matrizKFold[i][j])
-        #columna=np.sort(columna,order='distancia')
-        
-        columna=np.sort(columna, order='distancia')
-
-        # print(columna)
-        # columna= np.delete(columna,[0]) #quitamos el primer item al ser distancia = 0 por ser distancia a si mismo
-        # print('post eliminación')
-        # print(columna)
+    longitudDataSet= len(dataSet)
+    matrizColumnasOrdenadas=np.empty((0,longitudDataSet),dtype=dType)
+    for j in range(0, longitudDataSet):
+        columna=np.empty(longitudDataSet,dtype=dType)
+        for i in range(0, longitudDataSet):
+            columna[i]=(matrizKFold[j][i])
+        columna=np.sort(columna, order='distancia')      
         matrizColumnasOrdenadas=np.append(matrizColumnasOrdenadas,columna)
         
     
-    #Desde k=1 hasta 15
     z=1
-    for k in range(1,(len(dataSet))-1):
+    for k in range(1,16):     #Desde k=1 hasta 15 => range() devuelve valor (desde:hasta-1)
+
         #contador de aciertos para los k-vecinos       
         
         contadorAciertos = 0
         contadorAciertosPonderado = 0
         matrizColumnasOrdenadasAux = np.copy(matrizColumnasOrdenadas)  #creamos una copia de matrizColumnasOrdenadas
         #recorremos una columna y guardamos primero el punto cabecera,
-        for i in range(0,(len(dataSet))-1):
+        for i in range(0,longitudDataSet):
             claseDato=columna[0]['clase']
-            columna=matrizColumnasOrdenadasAux[:(len(dataSet))]
-            matrizColumnasOrdenadasAux=np.delete(matrizColumnasOrdenadasAux,np.s_[0:(len(dataSet))])
+            columna=matrizColumnasOrdenadasAux[:longitudDataSet]
+            matrizColumnasOrdenadasAux=np.delete(matrizColumnasOrdenadasAux,np.s_[0:longitudDataSet])
             print(f'vuelta: {z}')
             z+=1            
             columna= np.delete(columna,[0]) #quitamos el primer item al ser distancia = 0 por ser distancia a si mismo
@@ -272,14 +262,11 @@ def ObtenerKOptimo(dataSet,matrizKFold) -> int:
             #determinamos el valor de la clase para el punto analizado en base a sus vecinos
             
             clasesDistintasVecinos=np.unique(ClasesDeVecinos) #array de 1 de cada clase distinta
-
-            if(z == 600):
-                print('hola')
-
+           
             #kNN Tradicional
             banderaEmpate= False
             if(len(clasesDistintasVecinos) > 1): #significa que hay al menos 2 clases distintas en los vecinos
-                dosClasesMasRepetidas = counterClases.most_common(2)    
+                dosClasesMasRepetidas = counterClases.most_common(2)  
                 if(dosClasesMasRepetidas[0][1]==dosClasesMasRepetidas[1][1]): #si las dos clases mas repetidas de los k vecinos se repiten la misma cantidad de veces => hay empate y el algoritmo no puede definir la clase
                     banderaEmpate = True
 
@@ -307,8 +294,9 @@ def ObtenerKOptimo(dataSet,matrizKFold) -> int:
                         acuMaxPonderado= acu
                         clasePonderadaAux = clase
                         banderaEmpatePonderado = False
-                    if(acuMaxPonderado == acu):
-                        banderaEmpatePonderado = True
+                    else:
+                        if(acuMaxPonderado == acu):
+                            banderaEmpatePonderado = True
 
                 if(banderaEmpatePonderado == False):
                     if(clasePonderadaAux == claseDato):
@@ -361,7 +349,7 @@ def ObtenerKOptimo(dataSet,matrizKFold) -> int:
 
     plt.ion()
     plt.show()
-    plt.pause(10)
+    plt.pause(5)
     return kOptimo
 
 
