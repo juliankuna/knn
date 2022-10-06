@@ -10,6 +10,7 @@ from tkinter import filedialog
 import math
 #import pandas as pd
 from modelos import *
+from vistas import *
 from typing import Any, List, Counter
 import matplotlib.patches as mpatches
 
@@ -162,9 +163,6 @@ def CargarMatrizKFold(dataSet:List[Dato]):
 
     return matrizPuntos
 
-def _getDistancia(datoPrueba):
-    return datoPrueba.distancia
-
 def GraficarDatosOriginalesDelDataset(dataSet, matrizDataset):
     #Filtro de color
     color_filt=[]
@@ -192,15 +190,27 @@ def GraficarDatosOriginalesDelDataset(dataSet, matrizDataset):
     #plt.legend(loc='best')
     plt.show()
 
+def OrdenarColumnasMatrizKFold(matrizKFold,longitudDataSet):
+    dType = [('clase', int), ('distancia', float)]
+    #Ordenando la matriz para las validaciones cruzadas
+    matrizColumnasOrdenadas=np.empty((0,longitudDataSet),dtype=dType)
+    for j in range(0, longitudDataSet):
+        columna=np.empty(longitudDataSet,dtype=dType)
+        for i in range(0, longitudDataSet):
+            columna[i]=(matrizKFold[j][i])
+        columna=np.sort(columna, order='distancia')      
+        matrizColumnasOrdenadas=np.append(matrizColumnasOrdenadas,columna)
+    return matrizColumnasOrdenadas
+
 def IniciarAlgoritmo ():
     try:
         datosString=CargarArchivo()
         dataSet= CargarDataSet(datosString)
                
         matrizKFold = CargarMatrizKFold(dataSet)
-
+        matrizColumnasOrdenadas=OrdenarColumnasMatrizKFold(matrizKFold, len(dataSet))
         #Obtener k optimo.
-        ObtenerKOptimo(dataSet, matrizKFold)
+        ObtenerKOptimo(dataSet, matrizColumnasOrdenadas)
 
         ##Graficar datos reales del dataset
         #matrizDataset=CargarMatrizPuntos(datosString)
@@ -214,22 +224,12 @@ def IniciarAlgoritmo ():
         return
 
 
-def ObtenerKOptimo(dataSet,matrizKFold):
-    KFoldResults = []
-    KPonderadoResults = []
-
-    dType = [('clase', int), ('distancia', float)]
+def ObtenerKOptimo(dataSet,matrizColumnasOrdenadas):
+    resultadosK = []
+    resultadosKPonderado = []
     longitudDataSet= len(dataSet)
-    matrizColumnasOrdenadas=np.empty((0,longitudDataSet),dtype=dType)
-    for j in range(0, longitudDataSet):
-        columna=np.empty(longitudDataSet,dtype=dType)
-        for i in range(0, longitudDataSet):
-            columna[i]=(matrizKFold[j][i])
-        columna=np.sort(columna, order='distancia')      
-        matrizColumnasOrdenadas=np.append(matrizColumnasOrdenadas,columna)
         
-    
-    z=1
+    #z=1 #contador de vueltas del algoritmo
     hasta=valorK.get()+1
     for k in range(1,hasta):     #Desde k=1 hasta 15 => range() devuelve valor (Valordesde:Valorhasta-1)
         #contador de aciertos para los k-vecinos  
@@ -238,11 +238,11 @@ def ObtenerKOptimo(dataSet,matrizKFold):
         matrizColumnasOrdenadasAux = np.copy(matrizColumnasOrdenadas)  #creamos una copia de matrizColumnasOrdenadas
         #recorremos una columna y guardamos primero el punto cabecera,
         for i in range(0,longitudDataSet):
-            claseDato=columna[0]['clase']
             columna=matrizColumnasOrdenadasAux[:longitudDataSet]
+            claseDato=columna[0]['clase']
             matrizColumnasOrdenadasAux=np.delete(matrizColumnasOrdenadasAux,np.s_[0:longitudDataSet])
             #print(f'vuelta: {z}')
-            z+=1            
+            #z+=1            
             columna= np.delete(columna,[0]) #quitamos el primer item al ser distancia = 0 por ser distancia a si mismo
             
             puntoskVecinos = np.array(columna[:k])   #puntosKVecios= list(clase,distancia)         
@@ -272,7 +272,6 @@ def ObtenerKOptimo(dataSet,matrizKFold):
             acuMaxPonderado=0
             banderaEmpatePonderado = False
             
-
             if(len(clasesDistintasVecinos) > 1):
                 for clase in clasesDistintasVecinos:
                     acu = 0
@@ -297,57 +296,17 @@ def ObtenerKOptimo(dataSet,matrizKFold):
                 if(ClaseMasRepetida == claseDato):
                     contadorAciertosPonderado = contadorAciertosPonderado + 1
 
-        KFoldResults.append({"k": k, "Presición": contadorAciertos})            
-        KPonderadoResults.append({"k":k,"Presición":contadorAciertosPonderado})
+        resultadosK.append({"k": k, "Presición": contadorAciertos})            
+        resultadosKPonderado.append({"k":k,"Presición":contadorAciertosPonderado})
        
+    graficadorComparativo:GraficadorComparadorKnn = GraficadorComparadorKnn(dataSet,resultadosK,resultadosKPonderado,valorK.get())
+    graficadorComparativo.GraficarTablaComparativaDeLasK()
 
-            
+
     
-    #PLOT AND GUI TABLE FUNCTIONS
-    xList:List[int] = [x["k"] for x in KFoldResults]
-    yList:List[int] = [y["Presición"] for y in KFoldResults]
-    # for KFold in KFoldResults:
-    #     xList.append(KFold["k"])
-    #     yList.append(KFold["accuracy"])
-    
-    KFoldResults = sorted(KFoldResults, reverse=True, key=lambda d : d["Presición"])
-    KPonderadoResults = sorted(KPonderadoResults, reverse=True, key=lambda d : d["Presición"])
-    kOptimo = KFoldResults[0]
-    kOptimoPonderado = KPonderadoResults [0]    
-    
-    #Seteo de los valores k optimos en las variables globales
-    valorKOptimo.set(kOptimo['k'])
-    valorKOptimoPonderado.set(kOptimoPonderado['k'])
 
-
-    plt.plot(xList,yList,'r--')
-    plt.title(f"Comparación de valores k (Óptimo: k={kOptimo['k']}, Cantidad de aciertos = {kOptimo['Presición']})")
-    plt.xlabel('Valor de k')
-    plt.ylabel('Aciertos')
-
-
-    toShow:List[Any] = []
-    for KFold in KFoldResults:
-        if KFold["Presición"] == kOptimo["Presición"]:
-            toShow.append([KFold["k"],KFold["Presición"]])
-
-    plt.plot(kOptimo["k"], kOptimo["Presición"], color='green', marker="x")
-
-    plt.annotate(f'Mas preciso: ({kOptimo["k"]};{kOptimo["Presición"]})',
-                xy=(kOptimo["k"], kOptimo["Presición"]),
-                xytext=(kOptimo["k"], kOptimo["Presición"]/2),
-                arrowprops=dict(facecolor='black', arrowstyle="->"))
-
-    #Cargamos la tabla con los resultados de Kfold
-    # gui.kfold_results_table.delete(*gui.kfold_results_table.get_children())
-    # for bettersKinfo in toShow:
-    #     gui.kfold_results_table.insert("", 'end', values=bettersKinfo)
-    # gui.kfold_results_table.pack(pady=10)
-
-    plt.ion()
-    plt.show()
-    plt.pause(5)
-    return kOptimo
+    #Correr el algoritmo para K óptimo y para k ponderado óptimo 
+    #Procedemos a graficar comparativamente las clasificaciones con el k óptimo y con el k ponderado óptimo
 
 def setPathFile():
     nombreConRuta = filedialog.askopenfilename(title="Elegir un DataSet",filetypes = (("excel files",".csv"),("all files",".*")));
@@ -374,14 +333,8 @@ def GraficarSegundaVista(largoDataset :int):
     input_k = Scale(frame1, from_=1, to=largoDataset-1, orient=HORIZONTAL,troughcolor='red',variable=valorK, length= 200)
     input_k.set(15)
     input_k.grid(row = 4,column=1, pady=0,sticky='s', padx = 0)
-    # root=Tk()
-    # root.mainloop()
 
-    
-
-
-def GraficarVistaInicial ():  
-
+def GraficarVistaInicial ():
     cuadrotexto = Entry(frame1,textvariable=nombreArchivo,width=33)
     Label(frame1,text='Valores Iniciales ',fg='black',font=('Comic Sans MS',10)).grid(row=0,column=0,sticky='nw',padx=0,pady=0)
 
@@ -390,8 +343,6 @@ def GraficarVistaInicial ():
     Label(frame1,text='Nombre Archivo: ',fg='black',font=('Comic Sans MS',10)).grid(row=2,column=0,padx=5,pady=0)
     frame1.config(bd=2)
     frame1.config(relief='solid')
-
-    
 
     botonIniciar = Button(frame1, text='Iniciar algoritmo',command=IniciarAlgoritmo)
     botonIniciar.grid(row=6,column=1,sticky='e',padx=0,pady=10)
