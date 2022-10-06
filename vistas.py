@@ -19,6 +19,7 @@ class GraficadorComparadorKnn:
         self.resultadosKPonderado = resultadosKPonderado
         self.kMax = kMax
 
+        
     def GraficarTablaComparativaDeLasK(self):
         #PLOT AND GUI TABLE FUNCTIONS
         xList:List[int] = [x["k"] for x in self.resultadosK]
@@ -79,4 +80,10 @@ class GraficadorComparadorKnn:
         plt.ion()
         plt.show()
             
+    def ObtenerKOptimos(self):
+        resultadosDeK = sorted(self.resultadosK, reverse=True, key=lambda d : d["Presición"])
+        resultadosDeKPonderado = sorted(self.resultadosKPonderado, reverse=True, key=lambda d : d["Presición"])
+        kOptimo = resultadosDeK[0]
+        kOptimoPonderado = resultadosDeKPonderado[0]
+        return kOptimo['k'],kOptimoPonderado['k']
 

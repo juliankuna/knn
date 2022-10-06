@@ -205,11 +205,18 @@ def OrdenarColumnasMatrizKFold(matrizKFold,longitudDataSet):
 def IniciarAlgoritmo ():
     try:
         global dataSet
-               
+        global matrizColumnasOrdenadas       
         matrizKFold = CargarMatrizKFold(dataSet)
         matrizColumnasOrdenadas=OrdenarColumnasMatrizKFold(matrizKFold, len(dataSet))
         #Obtener k optimo.
-        ObtenerKOptimo(dataSet, matrizColumnasOrdenadas)
+        ObtenerKOptimos(dataSet)
+
+        #Correr el algoritmo para K óptimo y para k ponderado óptimo 
+        # global valorKOptimo
+        # global valorKOptimoPonderado
+        # global dataSetKnn
+        # global dataSetKnnPonderado
+        #dataSetKnn, dataSetKnnPonderado = obtenerDataSetsCalculadosConKOptimos()
 
         ##Graficar datos reales del dataset
         #matrizDataset=CargarMatrizPuntos(datosString)
@@ -222,89 +229,99 @@ def IniciarAlgoritmo ():
         print(str(e))
         return
 
+def EvaluarKEnElDataSet(k:int):
+    global dataSet
+    global matrizColumnasOrdenadas
+    contadorAciertos=0
+    contadorAciertosPonderado=0
+    longitudDataSet = len (dataSet)
+    matrizColumnasOrdenadasAux = np.copy(matrizColumnasOrdenadas)  #creamos una copia de matrizColumnasOrdenadas
+    #recorremos una columna y guardamos primero el punto cabecera,
+    for i in range(0,longitudDataSet):
+        columna=matrizColumnasOrdenadasAux[:longitudDataSet]
+        claseDato=columna[0]['clase']
+        matrizColumnasOrdenadasAux=np.delete(matrizColumnasOrdenadasAux,np.s_[0:longitudDataSet])
+        #print(f'vuelta: {z}')
+        #z+=1            
+        columna= np.delete(columna,[0]) #quitamos el primer item al ser distancia = 0 por ser distancia a si mismo
+            
+        puntoskVecinos = np.array(columna[:k])   #puntosKVecios= list(clase,distancia)         
+                        
+        ClasesDeVecinos = np.array(puntoskVecinos['clase'])
+        #determinamos cada clase y su cantidad de ocurrencias en los k vecinos
+        counterClases = Counter(ClasesDeVecinos)
+            
+        #determinamos el valor de la clase para el punto analizado en base a sus vecinos
+        clasesDistintasVecinos=np.unique(ClasesDeVecinos) #array de 1 de cada clase distinta
+           
+        #kNN Tradicional
+        banderaEmpate= False
+        if(len(clasesDistintasVecinos) > 1): #significa que hay al menos 2 clases distintas en los vecinos
+            dosClasesMasRepetidas = counterClases.most_common(2)  
+            if(dosClasesMasRepetidas[0][1]==dosClasesMasRepetidas[1][1]): #si las dos clases mas repetidas de los k vecinos se repiten la misma cantidad de veces => hay empate y el algoritmo no puede definir la clase
+                banderaEmpate = True
 
-def ObtenerKOptimo(dataSet,matrizColumnasOrdenadas):
+        #ClaseMasRepetida = 0
+        if(banderaEmpate == False):
+            ClaseMasRepetida = max(counterClases,key=counterClases.get)
+            if ClaseMasRepetida == claseDato:
+                contadorAciertos = contadorAciertos+1
+            
+        #kNN Ponderado
+        clasePonderadaAux = 0 # clase que se va a comparar a la del dato analizado            
+        acuMaxPonderado=0
+        banderaEmpatePonderado = False
+            
+        if(len(clasesDistintasVecinos) > 1):
+            for clase in clasesDistintasVecinos:
+                acu = 0
+                #kVecinosMismaClase=np.where(puntoskVecinos[0]==clase)
+                kVecinosMismaClase=[p for p in puntoskVecinos if p["clase"]==clase]
+                for aux in kVecinosMismaClase:
+                    acu= acu + 1/(aux['distancia']**2)
+                    
+                if(acuMaxPonderado < acu):
+                    acuMaxPonderado= acu
+                    clasePonderadaAux = clase
+                    banderaEmpatePonderado = False
+                else:
+                    if(acuMaxPonderado == acu):
+                        banderaEmpatePonderado = True
+
+            if(banderaEmpatePonderado == False):
+                if(clasePonderadaAux == claseDato):
+                    contadorAciertosPonderado = contadorAciertosPonderado + 1  
+        else: #k=1 entonces solo se compara la clase del vecino con la del dato
+            ClaseMasRepetida = max(counterClases,key=counterClases.get)
+            if(ClaseMasRepetida == claseDato):
+                contadorAciertosPonderado = contadorAciertosPonderado + 1
+    return contadorAciertos,contadorAciertosPonderado
+
+def ObtenerKOptimos(dataSet):
     resultadosK = []
     resultadosKPonderado = []
-    longitudDataSet= len(dataSet)
+    global dataSetKnn
+    global dataSetKnnPonderado
         
     #z=1 #contador de vueltas del algoritmo
     hasta=valorK.get()+1
     for k in range(1,hasta):     #Desde k=1 hasta 15 => range() devuelve valor (Valordesde:Valorhasta-1)
         #contador de aciertos para los k-vecinos  
-        contadorAciertos = 0
-        contadorAciertosPonderado = 0
-        matrizColumnasOrdenadasAux = np.copy(matrizColumnasOrdenadas)  #creamos una copia de matrizColumnasOrdenadas
-        #recorremos una columna y guardamos primero el punto cabecera,
-        for i in range(0,longitudDataSet):
-            columna=matrizColumnasOrdenadasAux[:longitudDataSet]
-            claseDato=columna[0]['clase']
-            matrizColumnasOrdenadasAux=np.delete(matrizColumnasOrdenadasAux,np.s_[0:longitudDataSet])
-            #print(f'vuelta: {z}')
-            #z+=1            
-            columna= np.delete(columna,[0]) #quitamos el primer item al ser distancia = 0 por ser distancia a si mismo
-            
-            puntoskVecinos = np.array(columna[:k])   #puntosKVecios= list(clase,distancia)         
-                        
-            ClasesDeVecinos = np.array(puntoskVecinos['clase'])
-            #determinamos cada clase y su cantidad de ocurrencias en los k vecinos
-            counterClases = Counter(ClasesDeVecinos)
-            
-            #determinamos el valor de la clase para el punto analizado en base a sus vecinos
-            clasesDistintasVecinos=np.unique(ClasesDeVecinos) #array de 1 de cada clase distinta
-           
-            #kNN Tradicional
-            banderaEmpate= False
-            if(len(clasesDistintasVecinos) > 1): #significa que hay al menos 2 clases distintas en los vecinos
-                dosClasesMasRepetidas = counterClases.most_common(2)  
-                if(dosClasesMasRepetidas[0][1]==dosClasesMasRepetidas[1][1]): #si las dos clases mas repetidas de los k vecinos se repiten la misma cantidad de veces => hay empate y el algoritmo no puede definir la clase
-                    banderaEmpate = True
-
-            #ClaseMasRepetida = 0
-            if(banderaEmpate == False):
-                ClaseMasRepetida = max(counterClases,key=counterClases.get)
-                if ClaseMasRepetida == claseDato:
-                    contadorAciertos = contadorAciertos+1
-            
-            #kNN Ponderado
-            clasePonderadaAux = 0 # clase que se va a comparar a la del dato analizado            
-            acuMaxPonderado=0
-            banderaEmpatePonderado = False
-            
-            if(len(clasesDistintasVecinos) > 1):
-                for clase in clasesDistintasVecinos:
-                    acu = 0
-                    #kVecinosMismaClase=np.where(puntoskVecinos[0]==clase)
-                    kVecinosMismaClase=[p for p in puntoskVecinos if p["clase"]==clase]
-                    for aux in kVecinosMismaClase:
-                        acu= acu + 1/(aux['distancia']**2)
-                    
-                    if(acuMaxPonderado < acu):
-                        acuMaxPonderado= acu
-                        clasePonderadaAux = clase
-                        banderaEmpatePonderado = False
-                    else:
-                        if(acuMaxPonderado == acu):
-                            banderaEmpatePonderado = True
-
-                if(banderaEmpatePonderado == False):
-                    if(clasePonderadaAux == claseDato):
-                        contadorAciertosPonderado = contadorAciertosPonderado + 1  
-            else: #k=1 entonces solo se compara la clase del vecino con la del dato
-                ClaseMasRepetida = max(counterClases,key=counterClases.get)
-                if(ClaseMasRepetida == claseDato):
-                    contadorAciertosPonderado = contadorAciertosPonderado + 1
-
+        contadorAciertos, contadorAciertosPonderado = EvaluarKEnElDataSet(k)
         resultadosK.append({"k": k, "Presición": contadorAciertos})            
         resultadosKPonderado.append({"k":k,"Presición":contadorAciertosPonderado})
     
     global graficadorComparativo
     graficadorComparativo=GraficadorComparadorKnn(dataSet,resultadosK,resultadosKPonderado,valorK.get())
-    #graficadorComparativo.GraficarTablaComparativaDeLasK()
-    botonObtenerKOptimo = Button(frame1, text='Ver gráfico comparativo de los k óptimos',command=graficadorComparativo.GraficarTablaComparativaDeLasK)
-    botonObtenerKOptimo.grid(row=7,column=1,sticky='e',padx=0,pady=10)
-    #Correr el algoritmo para K óptimo y para k ponderado óptimo 
-    #Procedemos a graficar comparativamente las clasificaciones con el k óptimo y con el k ponderado óptimo
+
+    #Agregamos el botón que permita visualizar la tabla comparativa de los rendimientos de los valores de k y de k ponderado
+    botonKOptimos = Button(frame1, text='Ver gráfico comparativo de los k óptimos',command=graficadorComparativo.GraficarTablaComparativaDeLasK)
+    botonKOptimos.grid(row=7,column=1,sticky='e',padx=0,pady=10)
+
+    global valorKOptimo
+    global valorKOptimoPonderado
+    #Seteamos los valores para el KOptimo y el KOptimoPonderado
+    valorKOptimo, valorKOptimoPonderado= graficadorComparativo.ObtenerKOptimos()
 
 def setPathFile():
     global datosString
@@ -346,8 +363,6 @@ def GraficarVistaInicial ():
 
     botonIniciar = Button(frame1, text='Iniciar algoritmo',command=IniciarAlgoritmo)
     botonIniciar.grid(row=6,column=1,sticky='e',padx=0,pady=10)
-    # botonObtenerKOptimo = Button(frame1, text='Obtener k óptimo',command=ObtenerKOptimo)
-    # botonObtenerKOptimo.grid(row=7,column=1,sticky='e',padx=0,pady=10)
     buttonDataSet = Button(frame1, text = "Seleccionar DATASET", width=15,command = setPathFile)
     buttonDataSet.grid(row=1,column=1,sticky='e',padx=5,pady=15)
 
@@ -423,8 +438,15 @@ def GenerarGrilla():
 #/////////////////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////////////////
 
+dType = [('clase', int), ('distancia', float)]
+#Ordenando la matriz para las validaciones cruzadas
+matrizColumnasOrdenadas=np.empty((0,600),dtype=dType)
+
 datosString:List[str] = None
 dataSet:List[Dato] = None
+
+dataSetKnn:List[Dato] = None
+dataSetKnnPonderado:List[Dato] = None
 
 root=Tk()
 root.title('Algoritmo kNN - Kunaschik, Saucedo, Zitelli');
@@ -438,8 +460,8 @@ nombreArchivo.set('')
 ubicacionArchivo=StringVar()
 ubicacionArchivo.set('')
 valorK = IntVar()
-valorKOptimo = IntVar()
-valorKOptimoPonderado = IntVar()
+valorKOptimo:int = 0
+valorKOptimoPonderado:int = 0
 frame1=Frame(root,width=800,height=600)
 frame1.grid(row=0,column=0,ipadx=10,ipady=10)
        
