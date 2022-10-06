@@ -298,13 +298,12 @@ def ObtenerKOptimo(dataSet,matrizColumnasOrdenadas):
 
         resultadosK.append({"k": k, "Presición": contadorAciertos})            
         resultadosKPonderado.append({"k":k,"Presición":contadorAciertosPonderado})
-       
-    graficadorComparativo:GraficadorComparadorKnn = GraficadorComparadorKnn(dataSet,resultadosK,resultadosKPonderado,valorK.get())
-    graficadorComparativo.GraficarTablaComparativaDeLasK()
-
-
     
-
+    global graficadorComparativo
+    graficadorComparativo=GraficadorComparadorKnn(dataSet,resultadosK,resultadosKPonderado,valorK.get())
+    #graficadorComparativo.GraficarTablaComparativaDeLasK()
+    botonObtenerKOptimo = Button(frame1, text='Ver gráfico comparativo de los k óptimos',command=graficadorComparativo.GraficarTablaComparativaDeLasK)
+    botonObtenerKOptimo.grid(row=7,column=1,sticky='e',padx=0,pady=10)
     #Correr el algoritmo para K óptimo y para k ponderado óptimo 
     #Procedemos a graficar comparativamente las clasificaciones con el k óptimo y con el k ponderado óptimo
 
@@ -441,7 +440,7 @@ valorKOptimoPonderado = IntVar()
 frame1=Frame(root,width=800,height=600)
 frame1.grid(row=0,column=0,ipadx=10,ipady=10)
        
-
+graficadorComparativo:GraficadorComparadorKnn = None
 GraficarVistaInicial()
 
 root.mainloop()
