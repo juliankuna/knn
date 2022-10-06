@@ -28,3 +28,14 @@ class DatoConClasesVecinos:
     y: float
     clase: int
     clasesVecinos:List[int]
+
+@dataclass
+class ClaseYDistancia:
+    clase: int
+    distancia:float
+
+
+@dataclass
+class DatoPrueba: 
+    dato: Dato
+    distancia:float

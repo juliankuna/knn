@@ -51,12 +51,12 @@ def GetClasesEnDataSet(todasLasClases)->List[int]:
             listaClases.append(clase)
     return listaClases
 
-def CargarDataSet(datosString:List[str]) -> List[Dato]:
+def CargarDataSet(stringDatos:List[str]) -> List[Dato]:
     dataSet: List[Dato] = []
 
     n=1             #Eliminamos la primer linea
-    while n<len(datosString):
-        fila=datosString[n].split(',');
+    while n<len(stringDatos):
+        fila=stringDatos[n].split(',');
         #cargamos una grilla con cada uno de los puntos (x,y,clase,distancia)
         dataSet.append(Dato(float(fila[0]), float(fila[1]),int(fila[2])))        
         n=n+1   
@@ -165,34 +165,11 @@ def CargarMatrizKFold(dataSet:List[Dato]):
 def _getDistancia(datoPrueba):
     return datoPrueba.distancia
 
-def IniciarAlgoritmo ():
-    try:
-        dataSet: List[Dato] = []
-        datosString= CargarArchivo();
-        dataSet= CargarDataSet(datosString)
-        matriz=CargarMatrizPuntos(datosString)
-
-        matrizKFold = CargarMatrizKFold(dataSet)
-        # clases = [f['clase'] for f in matrizKFold]
-        # clasesArray= np.array(clases[0])
-        # counterClases= Counter(clasesArray)
-        # clasesDistintasVecinos=np.unique(clasesArray) #array de 1 de cada clase distinta
-        # print(counterClases)
-        # print(clasesDistintasVecinos)
-        
-        #Obtener k optimo.
-        valorKOptimo.set(ObtenerKOptimo(dataSet, matrizKFold))
-        
-        #GENERAR GRILLA
-        #GenerarGrilla()   
-    except Exception as e:
-        messagebox.showwarning(message="Houston, we have a problem..." + str(e), title="Alerta")
-        print(str(e))
-        return
+def GraficarDatosOriginalesDelDataset(dataSet, matrizDataset):
     #Filtro de color
     color_filt=[]
     colors = ['red','green','blue']
-    for line in matriz:
+    for line in matrizDataset:
         if line[2]==0:
             color_filt.append(colors[0])
         elif line[2]==1:
@@ -200,19 +177,13 @@ def IniciarAlgoritmo ():
         elif line[2]==2:
             color_filt.append(colors[2])
 
-    # plt.close()
-    # plt.scatter(matriz[:,0],matriz[:,1],color=color_filt)
-    # plt.xlabel('Eje x')
-    # plt.ylabel('Eje y')
-    # plt.title('Gráfico de puntos con k='+str(valorK.get()))
-    # plt.show()
     clasesDelDataset=GetClasesEnDataSet([f.clase for f in dataSet])
     patches= []
     for i in range(0,len(clasesDelDataset)):
         patch = mpatches.Patch(color=colors[i], label=f'Clase: {clasesDelDataset[i]}')
         patches.append(patch)
     plt.close()
-    plt.scatter(matriz[:,0],matriz[:,1],color=color_filt,label="Datos")
+    plt.scatter(matrizDataset[:,0],matrizDataset[:,1],color=color_filt,label="Datos")
     plt.xlabel('Eje x')
     plt.ylabel('Eje y')
     plt.title('Gráfico de puntos del dataset')
@@ -221,8 +192,29 @@ def IniciarAlgoritmo ():
     #plt.legend(loc='best')
     plt.show()
 
+def IniciarAlgoritmo ():
+    try:
+        datosString=CargarArchivo()
+        dataSet= CargarDataSet(datosString)
+               
+        matrizKFold = CargarMatrizKFold(dataSet)
 
-def ObtenerKOptimo(dataSet,matrizKFold) -> int:
+        #Obtener k optimo.
+        ObtenerKOptimo(dataSet, matrizKFold)
+
+        ##Graficar datos reales del dataset
+        #matrizDataset=CargarMatrizPuntos(datosString)
+        #GraficarDatosOriginalesDelDataset(dataSet,matrizDataset)
+
+        #GENERAR GRILLA
+        #GenerarGrilla()   
+    except Exception as e:
+        messagebox.showwarning(message="Houston, we have a problem..." + str(e), title="Alerta")
+        print(str(e))
+        return
+
+
+def ObtenerKOptimo(dataSet,matrizKFold):
     KFoldResults = []
     KPonderadoResults = []
 
@@ -238,10 +230,9 @@ def ObtenerKOptimo(dataSet,matrizKFold) -> int:
         
     
     z=1
-    for k in range(1,16):     #Desde k=1 hasta 15 => range() devuelve valor (desde:hasta-1)
-
-        #contador de aciertos para los k-vecinos       
-        
+    hasta=valorK.get()+1
+    for k in range(1,hasta):     #Desde k=1 hasta 15 => range() devuelve valor (Valordesde:Valorhasta-1)
+        #contador de aciertos para los k-vecinos  
         contadorAciertos = 0
         contadorAciertosPonderado = 0
         matrizColumnasOrdenadasAux = np.copy(matrizColumnasOrdenadas)  #creamos una copia de matrizColumnasOrdenadas
@@ -250,7 +241,7 @@ def ObtenerKOptimo(dataSet,matrizKFold) -> int:
             claseDato=columna[0]['clase']
             columna=matrizColumnasOrdenadasAux[:longitudDataSet]
             matrizColumnasOrdenadasAux=np.delete(matrizColumnasOrdenadasAux,np.s_[0:longitudDataSet])
-            print(f'vuelta: {z}')
+            #print(f'vuelta: {z}')
             z+=1            
             columna= np.delete(columna,[0]) #quitamos el primer item al ser distancia = 0 por ser distancia a si mismo
             
@@ -259,8 +250,8 @@ def ObtenerKOptimo(dataSet,matrizKFold) -> int:
             ClasesDeVecinos = np.array(puntoskVecinos['clase'])
             #determinamos cada clase y su cantidad de ocurrencias en los k vecinos
             counterClases = Counter(ClasesDeVecinos)
-            #determinamos el valor de la clase para el punto analizado en base a sus vecinos
             
+            #determinamos el valor de la clase para el punto analizado en base a sus vecinos
             clasesDistintasVecinos=np.unique(ClasesDeVecinos) #array de 1 de cada clase distinta
            
             #kNN Tradicional
@@ -270,7 +261,7 @@ def ObtenerKOptimo(dataSet,matrizKFold) -> int:
                 if(dosClasesMasRepetidas[0][1]==dosClasesMasRepetidas[1][1]): #si las dos clases mas repetidas de los k vecinos se repiten la misma cantidad de veces => hay empate y el algoritmo no puede definir la clase
                     banderaEmpate = True
 
-            ClaseMasRepetida = 0
+            #ClaseMasRepetida = 0
             if(banderaEmpate == False):
                 ClaseMasRepetida = max(counterClases,key=counterClases.get)
                 if ClaseMasRepetida == claseDato:
@@ -322,12 +313,18 @@ def ObtenerKOptimo(dataSet,matrizKFold) -> int:
     KFoldResults = sorted(KFoldResults, reverse=True, key=lambda d : d["Presición"])
     KPonderadoResults = sorted(KPonderadoResults, reverse=True, key=lambda d : d["Presición"])
     kOptimo = KFoldResults[0]
-    kOptimoPonderado = KPonderadoResults [0]
+    kOptimoPonderado = KPonderadoResults [0]    
     
+    #Seteo de los valores k optimos en las variables globales
+    valorKOptimo.set(kOptimo['k'])
+    valorKOptimoPonderado.set(kOptimoPonderado['k'])
+
+
     plt.plot(xList,yList,'r--')
     plt.title(f"Comparación de valores k (Óptimo: k={kOptimo['k']}, Cantidad de aciertos = {kOptimo['Presición']})")
     plt.xlabel('Valor de k')
     plt.ylabel('Aciertos')
+
 
     toShow:List[Any] = []
     for KFold in KFoldResults:
@@ -352,7 +349,6 @@ def ObtenerKOptimo(dataSet,matrizKFold) -> int:
     plt.pause(5)
     return kOptimo
 
-
 def setPathFile():
     nombreConRuta = filedialog.askopenfilename(title="Elegir un DataSet",filetypes = (("excel files",".csv"),("all files",".*")));
     nombreInvertido=invertir_cadena(nombreConRuta)
@@ -362,12 +358,30 @@ def setPathFile():
     ubicacionArchivo.set(nombreConRuta);
     nombreArchivo.set(invertir_cadena(palabras[0]));
 
+    datosString=CargarArchivo()
+    dataSet= CargarDataSet(datosString)
+    GraficarSegundaVista(len(dataSet))
+
 def invertir_cadena(cadena):
     return cadena[::-1]
 
-def GraficarVistaInicial ():
-    frame1=Frame(root,width=800,height=600)
-    frame1.grid(row=0,column=0,ipadx=10,ipady=10)
+def GraficarSegundaVista(largoDataset :int):
+    
+    labelAviso = Label(frame1,text="Aviso, cuanto mayor sea el valor K-Max elegido, el tiempo de espera aumentará")
+    labelAviso.grid(row=3, column=0,columnspan=2,sticky='se', pady=5, padx = 0)
+    labelAviso.config(bg="yellow")
+    labelK = Label(frame1, text="Valor K-Max: ").grid(row=4, column=0,sticky='se', pady=0, padx = 0)
+    input_k = Scale(frame1, from_=1, to=largoDataset-1, orient=HORIZONTAL,troughcolor='red',variable=valorK, length= 200)
+    input_k.set(15)
+    input_k.grid(row = 4,column=1, pady=0,sticky='s', padx = 0)
+    # root=Tk()
+    # root.mainloop()
+
+    
+
+
+def GraficarVistaInicial ():  
+
     cuadrotexto = Entry(frame1,textvariable=nombreArchivo,width=33)
     Label(frame1,text='Valores Iniciales ',fg='black',font=('Comic Sans MS',10)).grid(row=0,column=0,sticky='nw',padx=0,pady=0)
 
@@ -377,16 +391,12 @@ def GraficarVistaInicial ():
     frame1.config(bd=2)
     frame1.config(relief='solid')
 
-    Label(frame1, text="Valor K: ").grid(row=3, column=0,sticky='se', pady=0, padx = 0)
-    input_k = Scale(frame1, from_=1, to=15, orient=HORIZONTAL,troughcolor='red',variable=valorK, length= 200)
-    input_k.set(5)
-    input_k.grid(row = 3,column=1, pady=0,sticky='s', padx = 0)
-
+    
 
     botonIniciar = Button(frame1, text='Iniciar algoritmo',command=IniciarAlgoritmo)
     botonIniciar.grid(row=6,column=1,sticky='e',padx=0,pady=10)
-    botonObtenerKOptimo = Button(frame1, text='Obtener k óptimo',command=ObtenerKOptimo)
-    botonObtenerKOptimo.grid(row=7,column=1,sticky='e',padx=0,pady=10)
+    # botonObtenerKOptimo = Button(frame1, text='Obtener k óptimo',command=ObtenerKOptimo)
+    # botonObtenerKOptimo.grid(row=7,column=1,sticky='e',padx=0,pady=10)
     buttonDataSet = Button(frame1, text = "Seleccionar DATASET", width=15,command = setPathFile)
     buttonDataSet.grid(row=1,column=1,sticky='e',padx=5,pady=15)
 
@@ -461,6 +471,8 @@ def GenerarGrilla():
         plt.show()
 #/////////////////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 root=Tk()
 root.title('Algoritmo kNN - Kunaschik, Saucedo, Zitelli');
 root.resizable(0,0)
@@ -474,7 +486,11 @@ ubicacionArchivo=StringVar()
 ubicacionArchivo.set('')
 valorK = IntVar()
 valorKOptimo = IntVar()
-GraficarVistaInicial()
+valorKOptimoPonderado = IntVar()
+frame1=Frame(root,width=800,height=600)
+frame1.grid(row=0,column=0,ipadx=10,ipady=10)
+       
 
+GraficarVistaInicial()
 
 root.mainloop()
