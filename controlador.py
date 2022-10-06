@@ -204,8 +204,7 @@ def OrdenarColumnasMatrizKFold(matrizKFold,longitudDataSet):
 
 def IniciarAlgoritmo ():
     try:
-        datosString=CargarArchivo()
-        dataSet= CargarDataSet(datosString)
+        global dataSet
                
         matrizKFold = CargarMatrizKFold(dataSet)
         matrizColumnasOrdenadas=OrdenarColumnasMatrizKFold(matrizKFold, len(dataSet))
@@ -308,6 +307,8 @@ def ObtenerKOptimo(dataSet,matrizColumnasOrdenadas):
     #Procedemos a graficar comparativamente las clasificaciones con el k óptimo y con el k ponderado óptimo
 
 def setPathFile():
+    global datosString
+    global dataSet
     nombreConRuta = filedialog.askopenfilename(title="Elegir un DataSet",filetypes = (("excel files",".csv"),("all files",".*")));
     nombreInvertido=invertir_cadena(nombreConRuta)
     #invertimos la cadena y spliteamos para separar el nombre de la ruta y que el nombre quede en la posición inicial de la lista
@@ -422,6 +423,8 @@ def GenerarGrilla():
 #/////////////////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////////////////
 
+datosString:List[str] = None
+dataSet:List[Dato] = None
 
 root=Tk()
 root.title('Algoritmo kNN - Kunaschik, Saucedo, Zitelli');
