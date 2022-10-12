@@ -1,10 +1,13 @@
 from operator import length_hint
+import tkinter
 from turtle import width
+from matplotlib.dates import DAILY
 import matplotlib.pyplot as plt
 import numpy as np
 from io import open
 from cProfile import label
 from tkinter import *
+from tkinter import ttk
 from tkinter import messagebox
 from tkinter import filedialog
 import math
@@ -13,8 +16,6 @@ from modelos import *
 from vistas import *
 from typing import Any, List, Counter
 import matplotlib.patches as mpatches
-
-#from knn import *
 
 #(x1,y1) punto de origen, (x2,y2) punto destino
 def CalcularDistanciaEuclidea(x1:float, y1:float, x2:float, y2:float) -> float:
@@ -63,7 +64,7 @@ def CargarDataSet(stringDatos:List[str]) -> List[Dato]:
         n=n+1   
     return dataSet
 
-#Se dejó de considerar por lo charlado con el profesor Karanik en la clase del 22/09/2022
+#Se dejó de considerar por lo charlado con el profesor Karanik en la clase del 22/09/2022 de utilizar validación cruzada de todo el dataSet
 def SepararDataSetEnEntrenamientoyPrueba():
     #contar la cantidad de clases
     clasesEnElDataset = GetClasesEnDataSet([f.clase for f in dataSet])
@@ -163,13 +164,48 @@ def CargarMatrizKFold(dataSet:List[Dato]):
 
     return matrizPuntos
 
-def GraficarDatosOriginalesDelDataset(datasetKnn, matrizDataset, datasetPonderado):
+def GraficarDatosDatasetsOptimos(datasetKnn, matrizDataSetKnn, datasetPonderado, matrizDataSetKnnPonderado):
     global valorKOptimo
     global valorKOptimoPonderado
+
     #Filtro de color
-    color_filt=[]
-    colors = ['pink','lightgreen','lightblue','lightgray','orange','lightpurple']
-    badColors= ['red','black']
+    color_filt=CargarFiltroColores(matrizDataSetKnn) 
+    todasLasClasesDelDataset=[f.clase for f in datasetKnn]
+    patches=CargarPatches(todasLasClasesDelDataset)
+    
+    fig = plt.figure()
+    graficoK = fig.add_subplot(121)
+    graficoKPonderado = fig.add_subplot(122)
+
+    puntosX = [f.x for f in datasetKnn]
+    puntosY = [f.y for f in datasetKnn]    
+    fig.suptitle(f'Gráfica comparativa para valores k comprendidos entre 1 y {valorK.get()}')
+    graficoK.scatter(puntosX,puntosY,color=color_filt,label="Datos")
+    graficoK.set_xlabel('Eje x')
+    graficoK.set_ylabel('Eje y')
+    graficoK.legend(handles=patches)
+    graficoK.set_title(f'Gráfico dataset con k óptimo ={valorKOptimo}')
+
+    #Grafico knn ponderado
+    color_filt2=CargarFiltroColores(matrizDataSetKnnPonderado) 
+    todasLasClasesDelDataset=[f.clase for f in datasetPonderado]
+    patches2=CargarPatches(todasLasClasesDelDataset)
+    # xPuntos = [f.x for f in datasetPonderado]
+    # yPuntos = [f.y for f in datasetPonderado]  
+    graficoKPonderado.scatter(puntosX,puntosY,color=color_filt2,label="Datos")
+    graficoKPonderado.set_xlabel('Eje x')
+    graficoKPonderado.set_ylabel('Eje y')
+    graficoKPonderado.legend(handles=patches2)
+    graficoKPonderado.set_title(f'Gráfico dataset con k ponderado óptimo ={valorKOptimoPonderado}')
+    
+    plt.ion()
+    plt.show()
+
+def CargarFiltroColores(matrizDataset):
+    global colors
+    global badColors
+    #colors = ['pink','lightgreen','lightblue','orange','lightpurple','lightgray']
+    color_filt = []
     for line in matrizDataset:
         if line[2]==0:
             color_filt.append(colors[0])
@@ -187,8 +223,11 @@ def GraficarDatosOriginalesDelDataset(datasetKnn, matrizDataset, datasetPonderad
             color_filt.append(badColors[0]) 
         elif line[2]==-2: #si clase =-2 significa que no pudo clasificar
             color_filt.append(badColors[1])
-    
-    todasLasClasesDelDataset=[f.clase for f in datasetKnn]
+    return color_filt
+
+def CargarPatches(todasLasClasesDelDataset):
+    global badColors
+    global colors
     clasesDelDataset=GetClasesEnDataSet(todasLasClasesDelDataset)
     clasesDelDataset.sort(reverse=True)
     counterClases= Counter(todasLasClasesDelDataset)
@@ -197,45 +236,14 @@ def GraficarDatosOriginalesDelDataset(datasetKnn, matrizDataset, datasetPonderad
     patches= []
     for i in range(0,len(clasesDelDataset)):
         if(clasesDelDataset[i] >= 0 ):
-            patch = mpatches.Patch(color=colors[i], label=f'Clase {clasesDelDataset[i]}: #{counterClases[clasesDelDataset[i]]}')      
+            patch = mpatches.Patch(color=colors[clasesDelDataset[i]], label=f'Clase {clasesDelDataset[i]}: #{counterClases[clasesDelDataset[i]]}')      
             patches.append(patch)
         else:
             break
 
     patches.append(mpatches.Patch(color=badColors[0], label=f'Malas clasificaciones: #{malasClasificaciones}'))
     patches.append(mpatches.Patch(color=badColors[1], label=f'Indeterminaciones: #{indeterminaciones}'))
-
-    fig = plt.figure()
-
-    graficoK = fig.add_subplot(121)
-    graficoKPonderado = fig.add_subplot(122)
-
-    puntosX = [f.x for f in datasetKnn]
-    puntosY = [f.y for f in datasetKnn]    
-    fig.suptitle(f'Gráfica comparativa para valores k comprendidos entre 1 y {valorK.get()}')
-    graficoK.scatter(puntosX,puntosY,color=color_filt,label="Datos")
-    graficoK.set_xlabel('Eje x')
-    graficoK.set_ylabel('Eje y')
-    graficoK.legend(handles=patches)
-    graficoK.set_title(f'Gráfico dataset con k óptimo ={valorKOptimo}')
-
-    xPuntos = [f.x for f in datasetPonderado]
-    yPuntos = [f.y for f in datasetPonderado]  
-    graficoKPonderado.scatter(xPuntos,yPuntos,color=color_filt,label="Datos")
-    graficoKPonderado.set_xlabel('Eje x')
-    graficoKPonderado.set_ylabel('Eje y')
-    graficoKPonderado.legend(handles=patches)
-    graficoKPonderado.set_title(f'Gráfico dataset con k ponderado óptimo ={valorKOptimoPonderado}')
-    # plt.close()
-    # plt.scatter(matrizDataset[:,0],matrizDataset[:,1],color=color_filt,label="Datos")
-    # plt.xlabel('Eje x')
-    # plt.ylabel('Eje y')
-    # plt.title('Gráfico del dataset con K óptimo')
-    
-    # plt.legend(handles=patches)
-    # #plt.legend(loc='best')
-    plt.ion()
-    plt.show()
+    return patches
 
 def OrdenarColumnasMatrizKFold(matrizKFold,longitudDataSet):
     dType = [('clase', int), ('distancia', float)]
@@ -249,34 +257,116 @@ def OrdenarColumnasMatrizKFold(matrizKFold,longitudDataSet):
         matrizColumnasOrdenadas=np.append(matrizColumnasOrdenadas,columna)
     return matrizColumnasOrdenadas
 
-def IniciarAlgoritmo ():
+def AgregarBotonesFuncionalidades():
+    global frame1
+    #Agregamos el botón que permita visualizar la tabla comparativa de los rendimientos de los valores de k y de k ponderado
+    botonKOptimos = Button(frame1, text='Ver gráfico comparativo de los k óptimos',command=graficadorComparativo.GraficarTablaComparativaDeLasK)
+    botonKOptimos.grid(row=7,column=1,sticky='e',padx=0,pady=10)
+
+    botonGraficoOriginal = Button(frame1, text='Ver gráfico del dataSet original',command=GraficarDatosOriginalesDelDataset)
+    botonGraficoOriginal.grid(row=7,column=0,sticky='e',padx=0,pady=10)
+
+    botonGraficoKOptimos = Button(frame1, text='Gráfica datasets óptimos calculados',command=GraficarDatosDatasetsCalculados)
+    botonGraficoKOptimos.grid(row=8,column=1,sticky='e',padx=0,pady=10)
+
+    botonTablaAciertosK = Button(frame1, text='Tabla de aciertos de los valores k ',command=GraficarTablaResultadosK)
+    botonTablaAciertosK.grid(row=8,column=0,sticky='e',padx=0,pady=10)
+
+def IniciarAlgoritmo():
     try:
         global dataSet
-        global matrizColumnasOrdenadas       
+        global dataSetOriginal
+        global matrizColumnasOrdenadas  
+
+        dataSet=dataSetOriginal     
         matrizKFold = CargarMatrizKFold(dataSet)
         matrizColumnasOrdenadas=OrdenarColumnasMatrizKFold(matrizKFold, len(dataSet))
         #Obtener k optimo.
         ObtenerKOptimos(dataSet)
 
+        AgregarBotonesFuncionalidades()
         #Correr el algoritmo para K óptimo y para k ponderado óptimo 
         # global valorKOptimo
         # global valorKOptimoPonderado
         global dataSetKnn
         global dataSetKnnPonderado
-        dataSetKnn, dataSetKnnPonderado = ObternerDataSetsCalculadosconKOptimos()
+
+        dataSetKnn, dataSetKnnPonderado = ObtenerDataSetsCalculadosconKOptimos()
         
-        ##
         matrizDataSetKnn=ArmarMatrizParaGraficar(dataSetKnn)
         matrizDataSetKnnPonderado=ArmarMatrizParaGraficar(dataSetKnnPonderado)
         ##Graficar datos reales del dataset
         #matrizDataset=CargarMatrizPuntos(datosString)
-        GraficarDatosOriginalesDelDataset(dataSetKnn, matrizDataSetKnn, dataSetKnnPonderado)
+        GraficarDatosDatasetsOptimos(dataSetKnn, matrizDataSetKnn, dataSetKnnPonderado, matrizDataSetKnnPonderado)
         #GENERAR GRILLA
         #GenerarGrilla()   
     except Exception as e:
         messagebox.showwarning(message="Houston, we have a problem..." + str(e), title="Alerta")
         print(str(e))
         return
+
+def GraficarTablaResultadosK():
+    global resultadosK
+    global resultadosKPonderado
+
+    resultadosK = sorted(resultadosK, reverse=True, key=lambda d : d["Precisión"])
+    resultadosKPonderado = sorted(resultadosKPonderado, reverse=True, key=lambda d : d["Precisión"])
+
+    frameAux = Toplevel(root)
+    frameAux.geometry("800x800")
+
+    tablaResultadosK = ttk.Treeview(frameAux, columns=("#1","#2","#3","#4"), show="headings")
+    tablaResultadosK.heading("#1", text="Valor de K",anchor=N)
+    tablaResultadosK.heading("#2", text="Precisión",anchor=N)
+    tablaResultadosK.heading("#3", text="Valor de K (ponderado)",anchor=N)
+    tablaResultadosK.heading("#4", text="Precisión",anchor=N)
+    tablaResultadosK.column("#1",anchor=N)
+    tablaResultadosK.column("#2",anchor=N)
+    tablaResultadosK.column("#3",anchor=N)
+    tablaResultadosK.column("#4",anchor=N)
+    
+    for i in range(0,len(resultadosK)):
+        resk=resultadosK[i]
+        resP=resultadosKPonderado[i]
+        tablaResultadosK.insert("",'end',values=(resk["k"],resk["Precisión"],resP["k"],resP["Precisión"]))
+    tablaResultadosK.pack(pady=10)
+
+    tablaResultadosK.grid(row=0, column=0, sticky='nsew')
+    scrollbar = ttk.Scrollbar(root, orient=tkinter.VERTICAL, command=tablaResultadosK.yview)
+    tablaResultadosK.configure(yscrollcommand=scrollbar.set)
+    scrollbar.grid(row=0, column=1, sticky='ns')
+
+  
+    mainloop()
+
+
+
+def GraficarDatosDatasetsCalculados():
+    global dataSetKnn
+    global dataSetKnnPonderado
+    
+    matrizDataSetKnn=ArmarMatrizParaGraficar(dataSetKnn)
+    matrizDataSetKnnPonderado=ArmarMatrizParaGraficar(dataSetKnnPonderado)
+    GraficarDatosDatasetsOptimos(dataSetKnn, matrizDataSetKnn, dataSetKnnPonderado, matrizDataSetKnnPonderado)
+
+def GraficarDatosOriginalesDelDataset():
+    global dataSet
+    matrizAux=ArmarMatrizParaGraficar(dataSet)
+    filtroColores=CargarFiltroColores(matrizAux)
+    todasLasClasesDelDataset = [d.clase for d in dataSet]
+    patches=CargarPatches(todasLasClasesDelDataset)
+
+    puntosX = [f.x for f in dataSet]
+    puntosY = [f.y for f in dataSet]    
+    #plt.close()
+    fig, ax = plt.subplots()
+    ax.scatter(puntosX,puntosY,color=filtroColores,label="Datos")
+    ax.set_xlabel('Eje x')
+    ax.set_ylabel('Eje y')
+    ax.legend(handles=patches)
+    ax.set_title('Gráfico del dataset original')
+    plt.ion()
+    plt.show()
 
 def ArmarMatrizParaGraficar(datasetAux:List[Dato]):
     matriz= np.zeros((len(datasetAux),3))
@@ -288,28 +378,28 @@ def ArmarMatrizParaGraficar(datasetAux:List[Dato]):
         n=n+1
     return matriz
 
-def ObternerDataSetsCalculadosconKOptimos():
+def ObtenerDataSetsCalculadosconKOptimos():
     global dataSet
     global matrizColumnasOrdenadas
     global valorKOptimo
     global valorKOptimoPonderado
     global dataSetKnn
     global dataSetKnnPonderado
-
-    dataSetKnn = np.copy(dataSet)
-    dataSetKnnPonderado = np.copy(dataSet)
-    
-
+    dataSetKnn = []
+    dataSetKnnPonderado = [] 
     longitudDataSet = len(dataSet)
     kOptimos:List[int] = [valorKOptimo,valorKOptimoPonderado]
     for posicion in range(0,2):
         k:int = kOptimos[posicion]
-        matrizColumnasOrdenadasAux = np.copy(matrizColumnasOrdenadas)  #creamos una copia de matrizColumnasOrdenadas        
+        matrizColumnasOrdenadasAux=np.empty_like(matrizColumnasOrdenadas)
+        np.copyto(matrizColumnasOrdenadasAux, matrizColumnasOrdenadas)  #creamos una copia de matrizColumnasOrdenadas        
         #recorremos una columna y guardamos primero el punto cabecera,
         for i in range(0,longitudDataSet):
+            datoAux= dataSet[i]
+            nuevoDato = Dato(datoAux.x,datoAux.y, datoAux.clase) #Creamos un nuevo Dato para no ocupar referencias a memoria del dataSet original
             columna=matrizColumnasOrdenadasAux[:longitudDataSet]
+            matrizColumnasOrdenadasAux=np.delete(matrizColumnasOrdenadasAux,np.s_[0:longitudDataSet])
             claseDato=columna[0]['clase']
-            matrizColumnasOrdenadasAux=np.delete(matrizColumnasOrdenadasAux,np.s_[0:longitudDataSet])                  
             columna= np.delete(columna,[0]) #quitamos el primer item al ser distancia = 0 por ser distancia a si mismo
                 
             puntoskVecinos = np.array(columna[:k])   #puntosKVecios= list(clase,distancia)         
@@ -320,24 +410,27 @@ def ObternerDataSetsCalculadosconKOptimos():
                 
             #determinamos el valor de la clase para el punto analizado en base a sus vecinos
             clasesDistintasVecinos=np.unique(ClasesDeVecinos) #array de 1 de cada clase distinta
-            
             if(posicion == 0):            #kNN Tradicional
-                banderaEmpate=False
+                banderaEmpate= False
                 if(len(clasesDistintasVecinos) > 1): #significa que hay al menos 2 clases distintas en los vecinos
                     dosClasesMasRepetidas = counterClases.most_common(2)  
                     if(dosClasesMasRepetidas[0][1]==dosClasesMasRepetidas[1][1]): #si las dos clases mas repetidas de los k vecinos se repiten la misma cantidad de veces => hay empate y el algoritmo no puede definir la clase
-                            dataSetKnn[i].clase = -2
-                            banderaEmpate=True
+                        banderaEmpate = True
+                        nuevoDato.clase=-2
+
                 #ClaseMasRepetida = 0
                 if(banderaEmpate == False):
                     ClaseMasRepetida = max(counterClases,key=counterClases.get)
-                    if ClaseMasRepetida != claseDato:                        
-                        dataSetKnn[i].clase = -1
+                    if ClaseMasRepetida != claseDato:
+                        nuevoDato.clase=-1 
+
+                dataSetKnn.append(nuevoDato)         
             else:       #si posicion=1 entonces es la segunda vuelta y se esta calculando para el k ponderado
                 #kNN Ponderado
                 clasePonderadaAux = 0 # clase que se va a comparar a la del dato analizado            
                 acuMaxPonderado=0
-                banderaEmpatePonderado = False                    
+                banderaEmpatePonderado = False
+                    
                 if(len(clasesDistintasVecinos) > 1):
                     for clase in clasesDistintasVecinos:
                         acu = 0
@@ -353,18 +446,18 @@ def ObternerDataSetsCalculadosconKOptimos():
                         else:
                             if(acuMaxPonderado == acu):
                                 banderaEmpatePonderado = True
-                    
-                    if(banderaEmpatePonderado == True):                        
-                        dataSetKnnPonderado[i].clase= -2
-                    else:
-                        if(clasePonderadaAux != claseDato):                            
-                            dataSetKnnPonderado[i].clase = -1
 
+                    if(banderaEmpatePonderado == False):
+                        if(clasePonderadaAux != claseDato):
+                            nuevoDato.clase=-1
+                    else:
+                        nuevoDato.clase=-2 #el algoritmo no pudo clasificar el punto porque hubo un empate
                 else: #k=1 entonces solo se compara la clase del vecino con la del dato
                     ClaseMasRepetida = max(counterClases,key=counterClases.get)
                     if(ClaseMasRepetida != claseDato):
-                        dataSetKnnPonderado[i].clase = -2
-    
+                        nuevoDato.clase=-1
+                dataSetKnnPonderado.append(nuevoDato)
+
     return dataSetKnn, dataSetKnnPonderado
 
 def EvaluarKEnElDataSet(k:int):
@@ -379,8 +472,7 @@ def EvaluarKEnElDataSet(k:int):
         columna=matrizColumnasOrdenadasAux[:longitudDataSet]
         claseDato=columna[0]['clase']
         matrizColumnasOrdenadasAux=np.delete(matrizColumnasOrdenadasAux,np.s_[0:longitudDataSet])
-        #print(f'vuelta: {z}')
-        #z+=1            
+ 
         columna= np.delete(columna,[0]) #quitamos el primer item al ser distancia = 0 por ser distancia a si mismo
             
         puntoskVecinos = np.array(columna[:k])   #puntosKVecios= list(clase,distancia)         
@@ -413,7 +505,6 @@ def EvaluarKEnElDataSet(k:int):
         if(len(clasesDistintasVecinos) > 1):
             for clase in clasesDistintasVecinos:
                 acu = 0
-                #kVecinosMismaClase=np.where(puntoskVecinos[0]==clase)
                 kVecinosMismaClase=[p for p in puntoskVecinos if p["clase"]==clase]
                 for aux in kVecinosMismaClase:
                     acu= acu + 1/(aux['distancia']**2)
@@ -436,6 +527,8 @@ def EvaluarKEnElDataSet(k:int):
     return contadorAciertos,contadorAciertosPonderado
 
 def ObtenerKOptimos(dataSet):
+    global resultadosK
+    global resultadosKPonderado
     resultadosK = []
     resultadosKPonderado = []
 
@@ -444,15 +537,11 @@ def ObtenerKOptimos(dataSet):
     for k in range(1,hasta):     #Desde k=1 hasta 15 => range() devuelve valor (Valordesde:Valorhasta-1)
         #contador de aciertos para los k-vecinos  
         contadorAciertos, contadorAciertosPonderado = EvaluarKEnElDataSet(k)
-        resultadosK.append({"k": k, "Presición": contadorAciertos})            
-        resultadosKPonderado.append({"k":k,"Presición":contadorAciertosPonderado})
+        resultadosK.append({"k": k, "Precisión": contadorAciertos})            
+        resultadosKPonderado.append({"k":k,"Precisión":contadorAciertosPonderado})
     
     global graficadorComparativo
-    graficadorComparativo=GraficadorComparadorKnn(dataSet,resultadosK,resultadosKPonderado,valorK.get())
-
-    #Agregamos el botón que permita visualizar la tabla comparativa de los rendimientos de los valores de k y de k ponderado
-    botonKOptimos = Button(frame1, text='Ver gráfico comparativo de los k óptimos',command=graficadorComparativo.GraficarTablaComparativaDeLasK)
-    botonKOptimos.grid(row=7,column=1,sticky='e',padx=0,pady=10)
+    graficadorComparativo=GraficadorComparadorKnn(dataSet,resultadosK,resultadosKPonderado,valorK.get())    
 
     global valorKOptimo
     global valorKOptimoPonderado
@@ -461,7 +550,7 @@ def ObtenerKOptimos(dataSet):
 
 def setPathFile():
     global datosString
-    global dataSet
+    global dataSetOriginal
     nombreConRuta = filedialog.askopenfilename(title="Elegir un DataSet",filetypes = (("excel files",".csv"),("all files",".*")));
     nombreInvertido=invertir_cadena(nombreConRuta)
     #invertimos la cadena y spliteamos para separar el nombre de la ruta y que el nombre quede en la posición inicial de la lista
@@ -471,8 +560,8 @@ def setPathFile():
     nombreArchivo.set(invertir_cadena(palabras[0]));
 
     datosString=CargarArchivo()
-    dataSet= CargarDataSet(datosString)
-    GraficarSegundaVista(len(dataSet))
+    dataSetOriginal= CargarDataSet(datosString)
+    GraficarSegundaVista(len(dataSetOriginal))
 
 def invertir_cadena(cadena):
     return cadena[::-1]
@@ -504,10 +593,6 @@ def GraficarVistaInicial ():
 
     frame=Frame(root,width=800,height=600)
     frame.grid(row=1,column=1,padx=20,pady=20)
-
-#/////////////////////////////////////////////////////////////////////////////////////////////////////
-#/////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 def GenerarGrilla():
         #Definiendo maximos y minimos para la grilla
@@ -571,18 +656,20 @@ def GenerarGrilla():
         fig.canvas.manager.set_window_title('IA II - Gráfico kNN')
         GrillaConDataset.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=True, shadow=True, ncol=5)                   
         plt.show()
-#/////////////////////////////////////////////////////////////////////////////////////////////////////
-#/////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#Variables globales
 dType = [('clase', int), ('distancia', float)]
-#Ordenando la matriz para las validaciones cruzadas
 matrizColumnasOrdenadas=np.empty((0,600),dtype=dType)
 
 datosString:List[str] = None
 dataSet:List[Dato] = None
-
+dataSetOriginal:List[Dato] = None
 dataSetKnn:List[Dato] = None
 dataSetKnnPonderado:List[Dato] = None
+resultadosK = []
+resultadosKPonderado = []
+colors = ['pink','lightgreen','lightblue','orange','lightpurple','lightgray']
+badColors= ['red','black']
 
 root=Tk()
 root.title('Algoritmo kNN - Kunaschik, Saucedo, Zitelli');

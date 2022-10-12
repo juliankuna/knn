@@ -23,17 +23,17 @@ class GraficadorComparadorKnn:
     def GraficarTablaComparativaDeLasK(self):
         #PLOT AND GUI TABLE FUNCTIONS
         xList:List[int] = [x["k"] for x in self.resultadosK]
-        yList:List[int] = [y["Presición"] for y in self.resultadosK]
+        yList:List[int] = [y["Precisión"] for y in self.resultadosK]
 
         xListP:List[int] = [x["k"] for x in self.resultadosKPonderado]
-        yListP:List[int] = [y["Presición"] for y in self.resultadosKPonderado]
+        yListP:List[int] = [y["Precisión"] for y in self.resultadosKPonderado]
 
         # for KFold in resultadosK:
         #     xList.append(KFold["k"])
         #     yList.append(KFold["accuracy"])
 
-        resultadosDeK = sorted(self.resultadosK, reverse=True, key=lambda d : d["Presición"])
-        resultadosDeKPonderado = sorted(self.resultadosKPonderado, reverse=True, key=lambda d : d["Presición"])
+        resultadosDeK = sorted(self.resultadosK, reverse=True, key=lambda d : d["Precisión"])
+        resultadosDeKPonderado = sorted(self.resultadosKPonderado, reverse=True, key=lambda d : d["Precisión"])
         kOptimo = resultadosDeK[0]
         kOptimoPonderado = resultadosDeKPonderado [0]
         
@@ -45,31 +45,31 @@ class GraficadorComparadorKnn:
         
         fig.suptitle(f'Gráfica comparativa para valores k comprendidos entre 1 y {self.kMax}')
         graficoK.plot(xList,yList,'b--')
-        graficoK.set_title(f"kNN (Óptimo: k={kOptimo['k']}, N° de aciertos = {kOptimo['Presición']})")
+        graficoK.set_title(f"kNN (Óptimo: k={kOptimo['k']}, N° de aciertos = {kOptimo['Precisión']})")
         graficoK.set_xlabel('Valor de k')
         graficoK.set_ylabel('Aciertos')
-        graficoK.plot(kOptimo["k"], kOptimo["Presición"], color='red', marker="x")
+        graficoK.plot(kOptimo["k"], kOptimo["Precisión"], color='red', marker="x")
 
         graficoKPonderado.plot(xListP,yListP,'b--')
-        graficoKPonderado.set_title(f"kNN con ponderación (Óptimo: k={kOptimoPonderado['k']}, N° de aciertos = {kOptimoPonderado['Presición']})")
+        graficoKPonderado.set_title(f"kNN con ponderación (Óptimo: k={kOptimoPonderado['k']}, N° de aciertos = {kOptimoPonderado['Precisión']})")
         graficoKPonderado.set_xlabel('Valor de k')
         graficoKPonderado.set_ylabel('Aciertos')
-        graficoKPonderado.plot(kOptimoPonderado["k"], kOptimoPonderado["Presición"], color='red', marker="x")
+        graficoKPonderado.plot(kOptimoPonderado["k"], kOptimoPonderado["Precisión"], color='red', marker="x")
         
         # plt.plot(xList,yList,'b--')
-        # plt.title(f"Comparación de valores k (Óptimo: k={kOptimo['k']}, Cantidad de aciertos = {kOptimo['Presición']})")
+        # plt.title(f"Comparación de valores k (Óptimo: k={kOptimo['k']}, Cantidad de aciertos = {kOptimo['Precisión']})")
         # plt.xlabel('Valor de k')
         # plt.ylabel('Aciertos')
 
         # toShow:List[Any] = []
         # for KFold in resultadosK:
-        #     if KFold["Presición"] == kOptimo["Presición"]:
-        #         toShow.append([KFold["k"],KFold["Presición"]])
+        #     if KFold["Precisión"] == kOptimo["Precisión"]:
+        #         toShow.append([KFold["k"],KFold["Precisión"]])
 
 
-        # plt.annotate(f'Mas preciso: ({kOptimo["k"]};{kOptimo["Presición"]})',
-        #             xy=(kOptimo["k"], kOptimo["Presición"]),
-        #             xytext=(kOptimo["k"], kOptimo["Presición"]/2),
+        # plt.annotate(f'Mas preciso: ({kOptimo["k"]};{kOptimo["Precisión"]})',
+        #             xy=(kOptimo["k"], kOptimo["Precisión"]),
+        #             xytext=(kOptimo["k"], kOptimo["Precisión"]/2),
         #             arrowprops=dict(facecolor='black', arrowstyle="->"))
 
         #Cargamos la tabla con los resultados de Kfold
@@ -81,8 +81,8 @@ class GraficadorComparadorKnn:
         plt.show()
             
     def ObtenerKOptimos(self):
-        resultadosDeK = sorted(self.resultadosK, reverse=True, key=lambda d : d["Presición"])
-        resultadosDeKPonderado = sorted(self.resultadosKPonderado, reverse=True, key=lambda d : d["Presición"])
+        resultadosDeK = sorted(self.resultadosK, reverse=True, key=lambda d : d["Precisión"])
+        resultadosDeKPonderado = sorted(self.resultadosKPonderado, reverse=True, key=lambda d : d["Precisión"])
         kOptimo = resultadosDeK[0]
         kOptimoPonderado = resultadosDeKPonderado[0]
         return kOptimo['k'],kOptimoPonderado['k']
