@@ -1,4 +1,6 @@
+from itertools import tee
 from operator import length_hint
+import threading
 import tkinter
 from turtle import width
 from matplotlib.dates import DAILY
@@ -8,6 +10,7 @@ from io import open
 from cProfile import label
 from tkinter import *
 from tkinter import ttk
+import time
 from tkinter import messagebox
 from tkinter import filedialog
 import math
@@ -259,32 +262,71 @@ def OrdenarColumnasMatrizKFold(matrizKFold,longitudDataSet):
 
 def AgregarBotonesFuncionalidades():
     global frame1
+    global my_progress
+    global progressMensaje
+    my_progress.destroy()
+    progressMensaje.destroy()
     #Agregamos el botón que permita visualizar la tabla comparativa de los rendimientos de los valores de k y de k ponderado
-    botonKOptimos = Button(frame1, text='Ver gráfico comparativo de los k óptimos',command=graficadorComparativo.GraficarTablaComparativaDeLasK)
+    botonKOptimos = Button(frame1, text='Gráfico comparativo de los k valores',command=graficadorComparativo.GraficarTablaComparativaDeLasK)
     botonKOptimos.grid(row=7,column=1,sticky='e',padx=0,pady=10)
 
-    botonGraficoOriginal = Button(frame1, text='Ver gráfico del dataSet original',command=GraficarDatosOriginalesDelDataset)
+    botonGraficoOriginal = Button(frame1, text='Gráfico del dataSet original',command=GraficarDatosOriginalesDelDataset)
     botonGraficoOriginal.grid(row=7,column=0,sticky='e',padx=0,pady=10)
 
-    botonGraficoKOptimos = Button(frame1, text='Gráfica datasets óptimos calculados',command=GraficarDatosDatasetsCalculados)
+    botonGraficoKOptimos = Button(frame1, text='Gráfico datasets óptimos calculados',command=GraficarDatosDatasetsCalculados)
     botonGraficoKOptimos.grid(row=8,column=1,sticky='e',padx=0,pady=10)
 
-    botonTablaAciertosK = Button(frame1, text='Tabla de aciertos de los valores k ',command=GraficarTablaResultadosK)
+    botonTablaAciertosK = Button(frame1, text='Tabla de aciertos de los k valores  ',command=GraficarTablaResultadosK)
     botonTablaAciertosK.grid(row=8,column=0,sticky='e',padx=0,pady=10)
 
+def BarraDeProgreso():
+    # frameAux = Toplevel(root)
+    # frameAux.geometry("400x200")     
+    my_progress.grid(row=7, column=1,padx=10, pady=5, sticky='e')
+    progressMensaje.grid(row=8, column=1,padx=10,pady=5, sticky='e')
+    progressMensaje['text'] = "Cargando..."
+    #my_progress.pack(pady=20)  
+    my_progress.start(10)        
+    #frameAux.mainloop()
+
+def ActualizarMensajeProgreso():
+    global banderaFin
+    if (banderaFin == False):
+        if (progressMensaje['text'] == "Cargando..."):
+            progressMensaje['text'] = "Actualizando los pesos de las conexiones..."
+        elif (progressMensaje['text'] == "Actualizando los pesos de las conexiones..."):
+            progressMensaje['text'] = "Vaciando cuentas bancarias..."
+        elif (progressMensaje['text'] == "Vaciando cuentas bancarias..."):
+            progressMensaje['text'] = "Buscando los vectores de soporte..."    
+        elif (progressMensaje['text'] == "Buscando los vectores de soporte..."):
+            progressMensaje['text'] = "Calculando las verosimilitudes..."
+        elif (progressMensaje['text'] == "Calculando las verosimilitudes..."):
+            progressMensaje['text'] = "Cargando..."   
+        root.after(3000, ActualizarMensajeProgreso)
+
+
+
+def PrimerPaso():
+    #Separamos la ejecución en 2 hilos, el principal que va a estar corriendo la progressbar 
+    #y uno secundario donde se va a correr el algoritmo en segundo plano
+    BarraDeProgreso()
+    hiloDelAlgoritmo=threading.Thread(target=IniciarAlgoritmo)
+    hiloDelAlgoritmo.start()
+
 def IniciarAlgoritmo():
-    try:
+    try: 
+        global banderaFin   
         global dataSet
         global dataSetOriginal
         global matrizColumnasOrdenadas  
-
+        
+        banderaFin = False #significa que el algoritmo sigue en ejecución
         dataSet=dataSetOriginal     
         matrizKFold = CargarMatrizKFold(dataSet)
         matrizColumnasOrdenadas=OrdenarColumnasMatrizKFold(matrizKFold, len(dataSet))
         #Obtener k optimo.
         ObtenerKOptimos(dataSet)
 
-        AgregarBotonesFuncionalidades()
         #Correr el algoritmo para K óptimo y para k ponderado óptimo 
         # global valorKOptimo
         # global valorKOptimoPonderado
@@ -295,15 +337,19 @@ def IniciarAlgoritmo():
         
         matrizDataSetKnn=ArmarMatrizParaGraficar(dataSetKnn)
         matrizDataSetKnnPonderado=ArmarMatrizParaGraficar(dataSetKnnPonderado)
-        ##Graficar datos reales del dataset
-        #matrizDataset=CargarMatrizPuntos(datosString)
-        GraficarDatosDatasetsOptimos(dataSetKnn, matrizDataSetKnn, dataSetKnnPonderado, matrizDataSetKnnPonderado)
+        
+        banderaFin = True  #significa que ya terminó su ejecución
+        AgregarBotonesFuncionalidades()
+
+        #Comentado hasta solucionar el error generado al querer graficar y trabajar con hilos.
+        #GraficarDatosDatasetsOptimos(dataSetKnn, matrizDataSetKnn, dataSetKnnPonderado, matrizDataSetKnnPonderado)
         #GENERAR GRILLA
         #GenerarGrilla()   
+        
     except Exception as e:
         messagebox.showwarning(message="Houston, we have a problem..." + str(e), title="Alerta")
         print(str(e))
-        return
+        return        
 
 def GraficarTablaResultadosK():
     global resultadosK
@@ -338,8 +384,6 @@ def GraficarTablaResultadosK():
 
   
     mainloop()
-
-
 
 def GraficarDatosDatasetsCalculados():
     global dataSetKnn
@@ -496,7 +540,7 @@ def EvaluarKEnElDataSet(k:int):
             ClaseMasRepetida = max(counterClases,key=counterClases.get)
             if ClaseMasRepetida == claseDato:
                 contadorAciertos = contadorAciertos+1
-            
+        
         #kNN Ponderado
         clasePonderadaAux = 0 # clase que se va a comparar a la del dato analizado            
         acuMaxPonderado=0
@@ -573,7 +617,7 @@ def GraficarSegundaVista(largoDataset :int):
     labelAviso.config(bg="yellow")
     labelK = Label(frame1, text="Valor K-Max: ").grid(row=4, column=0,sticky='se', pady=0, padx = 0)
     input_k = Scale(frame1, from_=1, to=largoDataset-1, orient=HORIZONTAL,troughcolor='red',variable=valorK, length= 300)
-    input_k.set(15)
+    input_k.set(2)
     input_k.grid(row = 4,column=1, pady=0,sticky='s', padx = 0)
 
 def GraficarVistaInicial ():
@@ -586,7 +630,7 @@ def GraficarVistaInicial ():
     frame1.config(bd=2)
     frame1.config(relief='solid')
 
-    botonIniciar = Button(frame1, text='Iniciar algoritmo',command=IniciarAlgoritmo)
+    botonIniciar = Button(frame1, text='Iniciar algoritmo',command=PrimerPaso)
     botonIniciar.grid(row=6,column=1,sticky='e',padx=0,pady=10)
     buttonDataSet = Button(frame1, text = "Seleccionar DATASET", width=15,command = setPathFile)
     buttonDataSet.grid(row=1,column=1,sticky='e',padx=5,pady=15)
@@ -687,8 +731,15 @@ valorKOptimo:int = 0
 valorKOptimoPonderado:int = 0
 frame1=Frame(root,width=800,height=600)
 frame1.grid(row=0,column=0,ipadx=10,ipady=10)
-       
+
+my_progress = ttk.Progressbar(frame1, orient=HORIZONTAL, length=300, mode='determinate')
+progressMensaje = Label(frame1,text=' ', font=('Comic Sans MS',8))
+
 graficadorComparativo:GraficadorComparadorKnn = None
 GraficarVistaInicial()
+banderaFin = False
+#Cada un segundo, si el algoritmo sigue corriendo, que cambie el mensaje de la barra de progreso
+if (banderaFin == False):
+    root.after(1000, ActualizarMensajeProgreso)
 
 root.mainloop()
