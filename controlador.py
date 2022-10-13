@@ -264,6 +264,10 @@ def AgregarBotonesFuncionalidades():
     global frame1
     global my_progress
     global progressMensaje
+    global botonKOptimos
+    global botonGraficoOriginal
+    global botonGraficoKOptimos
+    global botonTablaAciertosK
     my_progress.destroy()
     progressMensaje.destroy()
     #Agregamos el botón que permita visualizar la tabla comparativa de los rendimientos de los valores de k y de k ponderado
@@ -281,8 +285,12 @@ def AgregarBotonesFuncionalidades():
 
 def BarraDeProgreso():
     # frameAux = Toplevel(root)
-    # frameAux.geometry("400x200")     
+    # frameAux.geometry("400x200")
+    global my_progress
+    global progressMensaje
+    my_progress = ttk.Progressbar(frame1, orient=HORIZONTAL, length=300, mode='determinate')     
     my_progress.grid(row=7, column=1,padx=10, pady=5, sticky='e')
+    progressMensaje = Label(frame1,text=' ', font=('Comic Sans MS',8))
     progressMensaje.grid(row=8, column=1,padx=10,pady=5, sticky='e')
     progressMensaje['text'] = "Cargando..."
     #my_progress.pack(pady=20)  
@@ -291,6 +299,7 @@ def BarraDeProgreso():
 
 def ActualizarMensajeProgreso():
     global banderaFin
+    global progressMensaje
     if (banderaFin == False):
         if (progressMensaje['text'] == "Cargando..."):
             progressMensaje['text'] = "Actualizando los pesos de las conexiones..."
@@ -309,6 +318,16 @@ def ActualizarMensajeProgreso():
 def PrimerPaso():
     #Separamos la ejecución en 2 hilos, el principal que va a estar corriendo la progressbar 
     #y uno secundario donde se va a correr el algoritmo en segundo plano
+
+    if (banderaFin): #significa que ya se hizo click en el botón Iniciar Algoritmo anteriormente, asi que primero tenemos que destruir los botones de funcionalidades antes de correr de nuevo el algoritmo
+        global botonKOptimos
+        global botonGraficoOriginal
+        global botonGraficoKOptimos
+        global botonTablaAciertosK
+        botonKOptimos.destroy()
+        botonGraficoOriginal.destroy()
+        botonGraficoKOptimos.destroy()
+        botonTablaAciertosK.destroy()
     BarraDeProgreso()
     hiloDelAlgoritmo=threading.Thread(target=IniciarAlgoritmo)
     hiloDelAlgoritmo.start()
@@ -335,13 +354,14 @@ def IniciarAlgoritmo():
 
         dataSetKnn, dataSetKnnPonderado = ObtenerDataSetsCalculadosconKOptimos()
         
-        matrizDataSetKnn=ArmarMatrizParaGraficar(dataSetKnn)
-        matrizDataSetKnnPonderado=ArmarMatrizParaGraficar(dataSetKnnPonderado)
+        ##Comentado hasta solucionar el error generado al querer graficar y trabajar con hilos.
+        # matrizDataSetKnn=ArmarMatrizParaGraficar(dataSetKnn)
+        # matrizDataSetKnnPonderado=ArmarMatrizParaGraficar(dataSetKnnPonderado)
         
         banderaFin = True  #significa que ya terminó su ejecución
         AgregarBotonesFuncionalidades()
 
-        #Comentado hasta solucionar el error generado al querer graficar y trabajar con hilos.
+        ##Comentado hasta solucionar el error generado al querer graficar y trabajar con hilos.
         #GraficarDatosDatasetsOptimos(dataSetKnn, matrizDataSetKnn, dataSetKnnPonderado, matrizDataSetKnnPonderado)
         #GENERAR GRILLA
         #GenerarGrilla()   
@@ -359,7 +379,7 @@ def GraficarTablaResultadosK():
     resultadosKPonderado = sorted(resultadosKPonderado, reverse=True, key=lambda d : d["Precisión"])
 
     frameAux = Toplevel(root)
-    frameAux.geometry("800x800")
+    frameAux.geometry("800x400")
 
     tablaResultadosK = ttk.Treeview(frameAux, columns=("#1","#2","#3","#4"), show="headings")
     tablaResultadosK.heading("#1", text="Valor de K",anchor=N)
@@ -617,7 +637,7 @@ def GraficarSegundaVista(largoDataset :int):
     labelAviso.config(bg="yellow")
     labelK = Label(frame1, text="Valor K-Max: ").grid(row=4, column=0,sticky='se', pady=0, padx = 0)
     input_k = Scale(frame1, from_=1, to=largoDataset-1, orient=HORIZONTAL,troughcolor='red',variable=valorK, length= 300)
-    input_k.set(2)
+    input_k.set(15)
     input_k.grid(row = 4,column=1, pady=0,sticky='s', padx = 0)
 
 def GraficarVistaInicial ():
@@ -732,12 +752,19 @@ valorKOptimoPonderado:int = 0
 frame1=Frame(root,width=800,height=600)
 frame1.grid(row=0,column=0,ipadx=10,ipady=10)
 
-my_progress = ttk.Progressbar(frame1, orient=HORIZONTAL, length=300, mode='determinate')
-progressMensaje = Label(frame1,text=' ', font=('Comic Sans MS',8))
 
 graficadorComparativo:GraficadorComparadorKnn = None
 GraficarVistaInicial()
 banderaFin = False
+
+#botones de funcionalidades y progressbar
+my_progress = ttk.Progressbar(frame1, orient=HORIZONTAL, length=300, mode='determinate')
+progressMensaje = Label(frame1,text=' ', font=('Comic Sans MS',8))
+botonKOptimos = Button(frame1, text='Gráfico comparativo de los k valores')
+botonGraficoOriginal = Button(frame1, text='Gráfico del dataSet original')
+botonGraficoKOptimos = Button(frame1, text='Gráfico datasets óptimos calculados')
+botonTablaAciertosK = Button(frame1, text='Tabla de aciertos de los k valores  ')
+
 #Cada un segundo, si el algoritmo sigue corriendo, que cambie el mensaje de la barra de progreso
 if (banderaFin == False):
     root.after(1000, ActualizarMensajeProgreso)
