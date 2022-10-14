@@ -295,7 +295,21 @@ def ActualizarMensajeProgreso():
         elif (progressMensaje['text'] == "Buscando los vectores de soporte..."):
             progressMensaje['text'] = "Calculando las verosimilitudes..."
         elif (progressMensaje['text'] == "Calculando las verosimilitudes..."):
-            progressMensaje['text'] = "Cargando..."   
+            progressMensaje['text'] = "Agitando las neuronas..."
+        elif (progressMensaje['text'] == "Agitando las neuronas..."):
+            progressMensaje['text'] = "Calculando las probabilidades marginales..."
+        elif (progressMensaje['text'] == "Calculando las probabilidades marginales..."):
+            progressMensaje['text'] = "Evaluando la coherencia del conjunto de reglas..."
+        elif (progressMensaje['text'] == "Evaluando la coherencia del conjunto de reglas..."):
+            progressMensaje['text'] = "Calculando la vecindad de las neuronas..."
+        elif (progressMensaje['text'] == "Calculando la vecindad de las neuronas..."):
+            progressMensaje['text'] = "Calculando el error del patrón..."
+        elif (progressMensaje['text'] == "Calculando el error del patrón..."):
+            progressMensaje['text'] = "Aprobando Inteligencia Artificial 2..."
+        elif (progressMensaje['text'] == "Aprobando Inteligencia Artificial 2..."):
+            progressMensaje['text'] = "Pagando impuestos provinciales en rentas..."
+        elif (progressMensaje['text'] == "Pagando impuestos provinciales en rentas..."):
+            progressMensaje['text'] = "Cargando"
         root.after(3000, ActualizarMensajeProgreso)
 
 def ActualizarMensajeProgreso2():
@@ -323,8 +337,12 @@ def ActualizarMensajeProgreso2():
         elif (progressMensaje2['text'] == "Calculando el error del patrón..."):
             progressMensaje2['text'] = "Aprobando Inteligencia Artificial 2..."
         elif (progressMensaje2['text'] == "Aprobando Inteligencia Artificial 2..."):
-            progressMensaje2['text'] = "Pagando impuestos provinciales en rentas...ñp0  "        
+            progressMensaje2['text'] = "Pagando impuestos provinciales en rentas..."
+        elif (progressMensaje2['text'] == "Pagando impuestos provinciales en rentas..."):
+            progressMensaje2['text'] = "Cargando"
+                
         root.after(3000, ActualizarMensajeProgreso2)
+
 def PrimerPaso():
     #Separamos la ejecución en 2 hilos, el principal que va a estar corriendo la progressbar 
     #y uno secundario donde se va a correr el algoritmo en segundo plano
