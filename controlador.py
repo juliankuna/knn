@@ -1,21 +1,12 @@
-from ctypes import alignment
-from itertools import tee
-from operator import length_hint
 import threading
 import tkinter
-from turtle import width
-from matplotlib.dates import DAILY
 import matplotlib.pyplot as plt
 import numpy as np
 from io import open
-from cProfile import label
 from tkinter import *
 from tkinter import ttk
-import time
 from tkinter import messagebox
 from tkinter import filedialog
-import math
-#import pandas as pd
 from modelos import *
 from vistas import *
 from typing import Any, List, Counter
