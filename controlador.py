@@ -9,7 +9,7 @@ from tkinter import messagebox
 from tkinter import filedialog
 from modelos import *
 from vistas import *
-from typing import Any, List, Counter
+from typing import List, Counter
 import matplotlib.patches as mpatches
 
 def ActualizarMensajeProgreso():
@@ -165,6 +165,7 @@ def CargarDataSet(stringDatos:List[str]) -> List[Dato]:
 def CargarFiltroColores(matrizDataset):
     global colors
     global badColors
+    #Recordar que colors es:
     #colors = ['pink','lightgreen','lightblue','orange','lightpurple','lightgray']
     color_filt = []
     for line in matrizDataset:
@@ -225,8 +226,10 @@ def CargarPatches(todasLasClasesDelDataset):
         else:
             break
 
-    patches.append(mpatches.Patch(color=badColors[0], label=f'Malas clasificaciones: #{malasClasificaciones}'))
-    patches.append(mpatches.Patch(color=badColors[1], label=f'Indeterminaciones: #{indeterminaciones}'))
+    if (malasClasificaciones > 0):
+        patches.append(mpatches.Patch(color=badColors[0], label=f'Malas clasificaciones: #{malasClasificaciones}'))
+    if (indeterminaciones > 0):
+        patches.append(mpatches.Patch(color=badColors[1], label=f'Indeterminaciones: #{indeterminaciones}'))
     return patches
 
 def EvaluarKEnElDataSet(k:int):
@@ -339,6 +342,10 @@ def GraficarClasificacionParaKElegido():
     graficoKPonderado.legend(handles=patches2)
     graficoKPonderado.set_title(f'Gráfico dataset clasificado con ponderación para k={valorKElegido}')
     
+    #Para abrir el gráfico ocupando toda la pantalla
+    figManager = plt.get_current_fig_manager()
+    figManager.window.state('zoomed')
+    
     plt.ion()
     plt.show()
 
@@ -385,6 +392,10 @@ def GraficarDatosDatasetsOptimos(datasetKnn, matrizDataSetKnn, datasetPonderado,
     graficoKPonderado.legend(handles=patches2)
     graficoKPonderado.set_title(f'Gráfico dataset con k ponderado óptimo ={valorKOptimoPonderado}')
     
+    #Para abrir el gráfico ocupando toda la pantalla
+    figManager = plt.get_current_fig_manager()
+    figManager.window.state('zoomed')
+
     plt.ion()
     plt.show()
 
@@ -707,6 +718,17 @@ def setPathFile():
 
     datosString=CargarArchivo()
     dataSetOriginal= CargarDataSet(datosString)
+    #Destruimos los botones de funcionalidades adicionales para que se vuelvan a generar a correr el algoritmo
+    global botonKOptimos
+    global botonGraficoKOptimos
+    global botonTablaAciertosK
+    global botonGraficoK
+    botonGraficoK.destroy()
+    botonGraficoOriginal.destroy()
+    botonGraficoKOptimos.destroy()    
+    botonTablaAciertosK.destroy()
+    botonGraficoKOptimos.destroy()    
+
     GraficarSegundaVista(len(dataSetOriginal))
 
 #Variables globales
